@@ -1,79 +1,101 @@
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Input } from "./src/components/Input";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
 export default function Cadastro() {
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.container}>
-          <View style={styles.content}>
-            <View style={styles.top}>
-              <LinearGradient
-                colors={["#87CDE9", "#1F41BB"]}
-                start={{ x: 1.5, y: 0 }}
-                end={{ x: 0, y: 0 }}
-                style={styles.background}
-              />
-            </View>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require("../assets/images/iporalogo1.png")}
-                style={styles.logoMunicipio}
-              />
+  const [loadedImages, setLoadedImages] = useState(0);
 
-              <Image
-                source={require("../assets/images/cor2.jpg")}
-                style={styles.logo}
-              />
-              <Text style={styles.textoCuidado}>
-                O cuidado com a cidade na palma da sua mão.
-              </Text>
-            </View>
-            <Input placeholder="Nome completo:" icon="person-outline" />
-            <Input placeholder="Número:" icon="logo-whatsapp" />
-            <Input
-              placeholder="Senha:"
-              icon="lock-closed-outline"
-              secureTextEntry
+  const TOTAL_IMAGES = 3;
+
+  function handleImageLoad() {
+    setLoadedImages((prev) => prev + 1);
+  }
+
+return (
+  <View style={{ flex: 1 }}>
+    
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={0} // 🔥 ESSENCIAL
+        >
+          <View style={styles.top}>
+            <LinearGradient
+              colors={["#87CDE9", "#1F41BB"]}
+              start={{ x: 1.5, y: 0 }}
+              end={{ x: 0, y: 0 }}
+              style={styles.background}
             />
-            <Input
-              placeholder="Confirme a senha:"
-              icon="lock-closed-outline"
-              secureTextEntry
-            />
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Entrar</Text>
-            </TouchableOpacity>
-            <Text style={styles.textoFinal}>Já tem uma conta? Clique aqui</Text>
           </View>
 
-          <View style={styles.footerImageContainer}>
+          <View style={styles.logoContainer}>
             <Image
-              source={require("../assets/images/cidadeipo.png")}
-              style={styles.footerImage}
-              resizeMode="cover"
+              source={require("../assets/images/iporalogo1.png")}
+              style={styles.logoMunicipio}
+              onLoadEnd={handleImageLoad}
             />
+
+            <Image
+              source={require("../assets/images/cor2.jpg")}
+              style={styles.logo}
+              onLoadEnd={handleImageLoad}
+            />
+
+            <Text style={styles.textoCuidado}>
+              O cuidado com a cidade na palma da sua mão.
+            </Text>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  );
+
+          <Input placeholder="Nome completo:" />
+          <Input placeholder="Número:" />
+          <Input placeholder="Senha:" secureTextEntry />
+          <Input placeholder="Confirme a senha:" secureTextEntry />
+
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Entrar</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.textoFinal}>
+            Já tem uma conta? Clique aqui
+          </Text>
+        </KeyboardAwareScrollView>
+
+        {loadedImages < TOTAL_IMAGES && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#1F41BB" />
+          </View>
+        )}
+
+      </View>
+    </TouchableWithoutFeedback>
+
+    <View style={styles.footerImageContainer} pointerEvents="none">
+      <Image
+        source={require("../assets/images/cidadeipo.png")}
+        style={styles.footerImage}
+        resizeMode="cover"
+        onLoadEnd={handleImageLoad}
+      />
+    </View>
+
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -159,5 +181,13 @@ const styles = StyleSheet.create({
   footerImage: {
     width: "100%",
     height: Math.min(verticalScale(320), 340),
+  },
+  //LOADING
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#EDEDED", // mesma cor da tela
+    zIndex: 999,
   },
 });

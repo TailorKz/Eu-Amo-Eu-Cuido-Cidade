@@ -1,26 +1,31 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View, TextInputProps } from "react-native";
 
 import { moderateScale, scale, verticalScale } from "../utils/responsive";
 
-type Props = {
-  placeholder: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  secureTextEntry?: boolean;
+type Props = TextInputProps & {
+  icon?: any;
 };
 
-export function Input({ placeholder, icon, secureTextEntry }: Props) {
+export function Input(props: Props) {
+  const { icon, ...rest } = props;
+
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder={placeholder}
-        placeholderTextColor="#B0B0B0"
-        secureTextEntry={secureTextEntry}
+        {...rest}
+        placeholderTextColor="#999"
         style={styles.input}
       />
 
-      <Ionicons name={icon} size={moderateScale(20)} color="#B0B0B0" />
+      {icon && (
+        <Ionicons
+          name={icon}
+          size={moderateScale(20)}
+          color="#B0B0B0"
+        />
+      )}
     </View>
   );
 }
@@ -33,7 +38,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EDEDED",
     borderRadius: moderateScale(10),
     borderWidth: 0.5, // Define a largura da borda
-    borderColor: '#B0B0B0', // Define a cor da borda
+    borderColor: "#B0B0B0", // Define a cor da borda
 
     flexDirection: "row",
     alignItems: "center",
