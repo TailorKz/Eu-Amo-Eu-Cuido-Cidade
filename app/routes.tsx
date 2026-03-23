@@ -1,11 +1,16 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import Cadastro from "./cadastro";
+import Cadastro from "./";
 import Login from "./login";
 import Home from "./home";
 
-const Stack = createNativeStackNavigator();
+type RootStackParamList = {
+  Login: undefined;
+  Cadastro: undefined;
+  Home: undefined;
+};
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function Routes() {
   return (

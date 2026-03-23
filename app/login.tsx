@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
@@ -15,6 +16,7 @@ import { Input } from "./src/components/Input";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
 export default function Cadastro() {
+  const navigation = useNavigation();
   const [loadedImages, setLoadedImages] = useState(0);
 
   const TOTAL_IMAGES = 3;
@@ -56,23 +58,23 @@ export default function Cadastro() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
-      <Image
-        source={require("../assets/images/cidadeipo.jpg")}
-        style={styles.footerImage}
-        resizeMode="cover"
-        onLoadEnd={handleImageLoad}
-      />
+            <Image
+              source={require("../assets/images/cidadeipo.jpg")}
+              style={styles.footerImage}
+              resizeMode="cover"
+              onLoadEnd={handleImageLoad}
+            />
 
-      <LinearGradient
-        colors={[
-          "rgba(237,237,237,1)",
-          "rgba(237,237,237,0.8)",
-          "rgba(237,237,237,0.4)",
-          "rgba(237,237,237,0.3)",
-        ]}
-        style={styles.gradientOverlay}
-      />
-    </View>
+            <LinearGradient
+              colors={[
+                "rgba(237,237,237,1)",
+                "rgba(237,237,237,0.8)",
+                "rgba(237,237,237,0.4)",
+                "rgba(237,237,237,0.3)",
+              ]}
+              style={styles.gradientOverlay}
+            />
+          </View>
           <KeyboardAwareScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
@@ -156,7 +158,7 @@ export default function Cadastro() {
               <Text style={styles.buttonText}>Entrar</Text>
             </TouchableOpacity>
 
-            <Text style={styles.textoFinal}>
+            <Text onPress={() => navigation.navigate("Cadastro")}>
               Quer criar uma conta? Clique aqui
             </Text>
           </KeyboardAwareScrollView>
@@ -168,8 +170,6 @@ export default function Cadastro() {
           )}
         </View>
       </TouchableWithoutFeedback>
-
-     
     </View>
   );
 }

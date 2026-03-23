@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
@@ -12,10 +13,11 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Input } from "./src/components/Input";
-
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
 export default function Cadastro() {
+  
+  const navigation = useNavigation();
   const [loadedImages, setLoadedImages] = useState(0);
 
   const TOTAL_IMAGES = 3;
@@ -156,14 +158,16 @@ export default function Cadastro() {
               style={styles.button}
               onPress={() => {
                 if (validate()) {
-                  console.log("Tudo válido 🚀");
+                  navigation.navigate("Home");
                 }
               }}
             >
               <Text style={styles.buttonText}>Entrar</Text>
             </TouchableOpacity>
 
-            <Text style={styles.textoFinal}>Já tem uma conta? Clique aqui</Text>
+            <Text onPress={() => navigation.navigate("Login")}>
+              Já tem uma conta? Clique aqui
+            </Text>
           </KeyboardAwareScrollView>
 
           {loadedImages < TOTAL_IMAGES && (
