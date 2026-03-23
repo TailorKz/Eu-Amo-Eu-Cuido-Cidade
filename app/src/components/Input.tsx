@@ -1,51 +1,95 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TextInput, View, TextInputProps } from "react-native";
+import {
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  View,
+  Text,
+} from "react-native";
+import MaskInput from "react-native-mask-input";
 
 import { moderateScale, scale, verticalScale } from "../utils/responsive";
 
-type Props = TextInputProps & {
+type Props = Omit<TextInputProps, "onChangeText"> & {
   icon?: any;
+  mask?: any;
+  error?: string;
+  onChangeText?: (masked: string, unmasked?: string) => void;
 };
 
 export function Input(props: Props) {
-  const { icon, ...rest } = props;
+  const { icon, mask, error, onChangeText, ...rest } = props;
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        {...rest}
-        placeholderTextColor="#999"
-        style={styles.input}
-      />
-
-      {icon && (
-        <Ionicons
-          name={icon}
-          size={moderateScale(20)}
-          color="#B0B0B0"
-        />
+    <View style={styles.wrapper}>
+      
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <View style={styles.errorArrow} />
+        </View>
       )}
+
+      <View
+        style={[
+          styles.container,
+          error && { borderColor: "#ff4d4f" },
+        ]}
+      >
+        {mask ? (
+          <MaskInput
+            {...rest}
+            mask={mask}
+            style={styles.input}
+            placeholderTextColor="#999"
+            onChangeText={(masked, unmasked) => {
+              onChangeText?.(masked, unmasked);
+            }}
+          />
+        ) : (
+          <TextInput
+            {...rest}
+            style={styles.input}
+            placeholderTextColor="#999"
+            onChangeText={(text) => {
+              onChangeText?.(text);
+            }}
+          />
+        )}
+
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={moderateScale(20)}
+            color="#B0B0B0"
+          />
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     width: "90%",
     alignSelf: "center",
+    marginBottom: verticalScale(15),
+    position: "relative",
+  },
+
+  container: {
     height: moderateScale(60),
     backgroundColor: "#EDEDED",
     borderRadius: moderateScale(10),
-    borderWidth: 0.5, // Define a largura da borda
-    borderColor: "#B0B0B0", // Define a cor da borda
+    borderWidth: 0.5,
+    borderColor: "#B0B0B0",
 
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
 
     paddingHorizontal: scale(16),
-    marginBottom: verticalScale(15),
 
     // sombra iOS
     shadowColor: "#000",
@@ -61,5 +105,37 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: moderateScale(16),
     color: "#333",
+  },
+
+  errorContainer: {
+    position: "absolute",
+    top: -35,
+    left: 10,
+    backgroundColor: "#ff4d4f",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    zIndex: 10,
+  },
+
+  errorText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+
+  // 🔻 SETINHA
+  errorArrow: {
+    position: "absolute",
+    bottom: -6,
+    left: 10,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#ff4d4f",
   },
 });
