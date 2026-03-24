@@ -1,12 +1,11 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 import {
   moderateScale,
   scale,
   verticalScale,
 } from "../app/src/utils/responsive";
-import { router } from "expo-router";
 
 export default function Home() {
   const menuItems = [
@@ -68,28 +67,14 @@ export default function Home() {
       {/* MENU INFERIOR */}
       <View style={styles.bottomMenu}>
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="home" size={moderateScale(22)} color="#1F41BB" />
-          <Text style={[styles.menuText, { color: "#1F41BB" }]}>Home</Text>
+          <Text style={styles.menuText}>Home</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons
-            name="document-text-outline"
-            size={moderateScale(22)}
-            color="#555"
-          />
           <Text style={styles.menuText}>Reportos</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push("/perfil")}
-        >
-          <Ionicons
-            name="person-outline"
-            size={moderateScale(22)}
-            color="#555"
-          />
+        <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuText}>Perfil</Text>
         </TouchableOpacity>
       </View>
@@ -112,18 +97,18 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(22),
     fontWeight: "600",
     color: "#333",
   },
 
   logo: {
     width: scale(120),
-    height: verticalScale(70),
+    height: verticalScale(50),
   },
 
   title: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(20),
     fontWeight: "700",
     color: "#333",
     marginTop: verticalScale(20),
@@ -139,7 +124,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: "48%",
-    height: verticalScale(170),
+    height: verticalScale(180),
 
     backgroundColor: "#FFF",
     borderRadius: moderateScale(14),
@@ -156,8 +141,8 @@ const styles = StyleSheet.create({
   },
 
   cardImage: {
-    width: scale(110),
-    height: scale(110),
+    width: scale(120),
+    height: scale(120),
     marginTop: verticalScale(10),
   },
 
@@ -200,6 +185,5 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     color: "#555",
     fontWeight: "600",
-    marginTop: verticalScale(2),
   },
 });

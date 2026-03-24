@@ -38,7 +38,7 @@ export function Select({
   // altura animada
   const heightInterpolate = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, options.length * 45] // altura por item
+    outputRange: [0, options.length * 45]
   });
 
   // rotação da seta

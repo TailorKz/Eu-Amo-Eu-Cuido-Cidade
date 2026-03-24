@@ -1,5 +1,4 @@
 import { useRouter } from "expo-router";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
