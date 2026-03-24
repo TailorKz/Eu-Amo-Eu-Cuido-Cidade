@@ -1,128 +1,189 @@
-import { useRouter } from "expo-router";
 import React from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 import {
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Select } from "./src/components/Select";
-import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+  moderateScale,
+  scale,
+  verticalScale,
+} from "../app/src/utils/responsive";
 
+export default function Home() {
+  const menuItems = [
+    {
+      title: "Infraestrutura",
+      image: require("../assets/images/infra.png"),
+    },
+    {
+      title: "Iluminação\nPública",
+      image: require("../assets/images/ilum.png"),
+    },
+    {
+      title: "Urbanismo",
+      image: require("../assets/images/urbanismo.png"),
+    },
+    {
+      title: "Limpeza\nUrbana",
+      image: require("../assets/images/limpeza.png"),
+    },
+    {
+      title: "Saneamento\ne água",
+      image: require("../assets/images/saneamento.png"),
+    },
+    {
+      title: "Saúde Pública\ne Vigilância",
+      image: require("../assets/images/saude.png"),
+    },
+  ];
 
-const { width } = Dimensions.get("window");
-
-export default function HomeScreen() {
-  const router = useRouter();
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>
-          O cuidado com a cidade{"\n"}na palma da sua mão!
-        </Text>
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.banner}>
+        <Text style={styles.name}>Olá Tailor!</Text>
+
         <Image
-          source={require("../assets/images/mao2.png")}
-          style={styles.image}
+          source={require("../assets/images/euamoipora.png")}
+          style={styles.logo}
           resizeMode="contain"
         />
-        <View style={styles.content}>
-          <View style={styles.bottomArea}>
-            <Text style={styles.label}>Escolha sua cidade:</Text>
-            <Select
-              placeholder="Escolha sua cidade"
-              options={["Iporã do Oeste", "São Miguel do Oeste"]}
-              onSelect={(value) => console.log(value)}
-            />
-            <View style={styles.buttons}>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => router.push("/login")}
-              >
-                <Text style={styles.primaryText}>Entrar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => router.push("/cadastro")}
-              >
-                <Text style={styles.secondaryText}>Criar conta</Text>
-              </TouchableOpacity>
+      </View>
+
+      {/* TÍTULO */}
+      <Text style={styles.title}>Faça sua solicitação:</Text>
+
+      {/* GRID */}
+      <View style={styles.grid}>
+        {menuItems.map((item, index) => (
+          <TouchableOpacity key={index} style={styles.card}>
+            <Image source={item.image} style={styles.cardImage} />
+
+            <View style={styles.textContainer}>
+              <Text style={styles.cardText}>{item.title}</Text>
             </View>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* MENU INFERIOR */}
+      <View style={styles.bottomMenu}>
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuText}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuText}>Reportos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuText}>Perfil</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#E9EAEC" },
-  container: { paddingTop: verticalScale(30) },
-  title: {
-    fontSize: moderateScale(32),
-    fontWeight: "700",
-    color: "#1F41BB",
-    textAlign: "center",
-    marginBottom: verticalScale(20),
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  content: { paddingHorizontal: scale(24) },
-  image: {
-    width: Math.min(scale(360), width * 0.95),
-    height: verticalScale(360),
-    alignSelf: "flex-start",
-    marginBottom: verticalScale(20),
-    marginTop: verticalScale(20),
-  },
-  bottomArea: { width: "100%" },
-  label: {
-    fontSize: moderateScale(26),
-    fontWeight: "600",
-    marginBottom: verticalScale(20),
-    color: "#292D36",
-    textAlign: "center",
-  },
-  select: {
-    height: moderateScale(50),
-    backgroundColor: "#F2F2F2",
-    borderRadius: moderateScale(10),
-    justifyContent: "center",
+  container: {
+    flex: 1,
+    backgroundColor: "#F4F7F8",
     paddingHorizontal: scale(16),
-    marginBottom: verticalScale(20),
+    paddingTop: verticalScale(40),
   },
-  selectText: { fontSize: moderateScale(16) },
-  buttons: {
+
+  banner: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  name: {
+    fontSize: moderateScale(22),
+    fontWeight: "600",
+    color: "#333",
+  },
+
+  logo: {
+    width: scale(120),
+    height: verticalScale(50),
+  },
+
+  title: {
+    fontSize: moderateScale(20),
+    fontWeight: "700",
+    color: "#333",
+    marginTop: verticalScale(20),
+    marginBottom: verticalScale(20),
+    textAlign: "center",
+  },
+
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+
+  card: {
+    width: "48%",
+    height: verticalScale(180),
+
+    backgroundColor: "#FFF",
+    borderRadius: moderateScale(14),
+
+    alignItems: "center",
+
+    marginBottom: verticalScale(10),
+    elevation: 3,
+  },
+
+  cardContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cardImage: {
+    width: scale(120),
+    height: scale(120),
     marginTop: verticalScale(10),
   },
-  primaryButton: {
-    width: "48%",
-    height: moderateScale(50),
-    backgroundColor: "#1F41BB",
-    borderRadius: moderateScale(10),
+
+  cardText: {
+    fontSize: moderateScale(18),
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+
+  textContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    width: "100%",
   },
-  primaryText: {
-    color: "white",
-    fontSize: moderateScale(16),
+
+  bottomMenu: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+
+    height: verticalScale(70),
+    backgroundColor: "#EDEDED",
+
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+
+    borderTopWidth: 1,
+    borderColor: "#DDD",
+  },
+
+  menuItem: {
+    alignItems: "center",
+  },
+
+  menuText: {
+    fontSize: moderateScale(13),
+    color: "#555",
     fontWeight: "600",
   },
-  secondaryButton: {
-    width: "48%",
-    height: moderateScale(50),
-    backgroundColor: "#ffffff",
-    borderRadius: moderateScale(10),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  secondaryText: { fontSize: moderateScale(16), fontWeight: "500" },
 });

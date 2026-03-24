@@ -1,4 +1,5 @@
-import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
@@ -15,9 +16,9 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { Input } from "./src/components/Input";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
+const router = useRouter();
+
 export default function Cadastro() {
-  
-  const navigation = useNavigation();
   const [loadedImages, setLoadedImages] = useState(0);
 
   const TOTAL_IMAGES = 3;
@@ -158,14 +159,17 @@ export default function Cadastro() {
               style={styles.button}
               onPress={() => {
                 if (validate()) {
-                  navigation.navigate("Home");
+                  router.push("/");
                 }
               }}
             >
               <Text style={styles.buttonText}>Entrar</Text>
             </TouchableOpacity>
 
-            <Text onPress={() => navigation.navigate("Login")}>
+            <Text
+              onPress={() => router.push("/login")}
+              style={styles.textoFinal}
+            >
               Já tem uma conta? Clique aqui
             </Text>
           </KeyboardAwareScrollView>
