@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
@@ -6,36 +5,37 @@ import {
   scale,
   verticalScale,
 } from "../app/src/utils/responsive";
+import { BottomMenu } from "./src/components/BottomMenu";
 import { router } from "expo-router";
 
-export default function Home() {
-  const menuItems = [
-    {
-      title: "Infraestrutura",
-      image: require("../assets/images/infra.png"),
-    },
-    {
-      title: "Iluminação\nPública",
-      image: require("../assets/images/ilum.png"),
-    },
-    {
-      title: "Urbanismo",
-      image: require("../assets/images/urbanismo.png"),
-    },
-    {
-      title: "Limpeza\nUrbana",
-      image: require("../assets/images/limpeza.png"),
-    },
-    {
-      title: "Saneamento\ne água",
-      image: require("../assets/images/saneamento.png"),
-    },
-    {
-      title: "Saúde Pública\ne Vigilância",
-      image: require("../assets/images/saude.png"),
-    },
-  ];
+const menuItems = [
+  {
+    title: "Infraestrutura",
+    image: require("../assets/images/infra.png"),
+  },
+  {
+    title: "Iluminação\nPública",
+    image: require("../assets/images/ilum.png"),
+  },
+  {
+    title: "Urbanismo",
+    image: require("../assets/images/urbanismo.png"),
+  },
+  {
+    title: "Limpeza\nUrbana",
+    image: require("../assets/images/limpeza.png"),
+  },
+  {
+    title: "Saneamento\ne água",
+    image: require("../assets/images/saneamento.png"),
+  },
+  {
+    title: "Saúde Pública\ne Vigilância",
+    image: require("../assets/images/saude.png"),
+  },
+];
 
+export default function Home() {
   return (
     <View style={styles.container}>
       {/* HEADER */}
@@ -55,9 +55,17 @@ export default function Home() {
       {/* GRID */}
       <View style={styles.grid}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.card}>
+          <TouchableOpacity
+            key={index}
+            style={styles.card}
+            onPress={() =>
+              router.push({
+                pathname: "/solicitacao",
+                params: { categoria: item.title.replace("\n", " ") }, // Tira a quebra de linha do título
+              })
+            }
+          >
             <Image source={item.image} style={styles.cardImage} />
-
             <View style={styles.textContainer}>
               <Text style={styles.cardText}>{item.title}</Text>
             </View>
@@ -65,34 +73,8 @@ export default function Home() {
         ))}
       </View>
 
-      {/* MENU INFERIOR */}
-      <View style={styles.bottomMenu}>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="home" size={moderateScale(22)} color="#1F41BB" />
-          <Text style={[styles.menuText, { color: "#1F41BB" }]}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons
-            name="document-text-outline"
-            size={moderateScale(22)}
-            color="#555"
-          />
-          <Text style={styles.menuText}>Reportos</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push("/perfil")}
-        >
-          <Ionicons
-            name="person-outline"
-            size={moderateScale(22)}
-            color="#555"
-          />
-          <Text style={styles.menuText}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
+      {/* AQUI ESTÁ A MÁGICA: O menu velho sumiu, e usamos só o componente novo */}
+      <BottomMenu activeRoute="home" />
     </View>
   );
 }
@@ -103,6 +85,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4F7F8",
     paddingHorizontal: scale(16),
     paddingTop: verticalScale(40),
+    paddingBottom: verticalScale(80), // Isso garante que os últimos botões não fiquem escondidos atrás do menu
   },
 
   banner: {
@@ -140,19 +123,11 @@ const styles = StyleSheet.create({
   card: {
     width: "48%",
     height: verticalScale(170),
-
     backgroundColor: "#FFF",
     borderRadius: moderateScale(14),
-
     alignItems: "center",
-
     marginBottom: verticalScale(10),
     elevation: 3,
-  },
-
-  cardContent: {
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   cardImage: {
@@ -175,31 +150,5 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  bottomMenu: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-
-    height: verticalScale(70),
-    backgroundColor: "#EDEDED",
-
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-
-    borderTopWidth: 1,
-    borderColor: "#DDD",
-  },
-
-  menuItem: {
-    alignItems: "center",
-  },
-
-  menuText: {
-    fontSize: moderateScale(13),
-    color: "#555",
-    fontWeight: "600",
-    marginTop: verticalScale(2),
-  },
+  // Note que apaguei totalmente os estilos "bottomMenu", "menuItem" e "menuText" que estavam sobrando aqui.
 });
