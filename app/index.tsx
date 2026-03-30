@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import React from "react";
+import { Redirect, useRouter } from "expo-router";
+import React, { useRef } from "react";
 import {
   Dimensions,
   Image,
@@ -8,16 +8,42 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Select } from "./src/components/Select";
+import { Select, SelectRef } from "./src/components/Select"; // 🔴 Importamos o SelectRef
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
-
+import { useAuthStore } from "./src/store/useAuthStore";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  // 🔴 1. Cria a variável que vai segurar o controle remoto do Select
+  const selectRef = useRef<SelectRef>(null);
+
+  if (isAuthenticated) {
+    return <Redirect href="/home" />;
+  }
+
+  // 🔴 2. Função inteligente de navegação
+  const handleNavigation = (path: "/login" | "/cadastro") => {
+    // Busca na memória NA HORA DO CLIQUE se tem cidade
+    const cidadeAtual = useAuthStore.getState().cidadeSelecionada;
+
+    if (!cidadeAtual) {
+      Alert.alert("Atenção", "Por favor, escolha a sua cidade antes de continuar.");
+      
+      // MÁGICA 2: Aperta o botão do controle remoto para abrir o Select!
+      selectRef.current?.openDropdown();
+      return;
+    }
+    
+    router.push(path);
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -35,21 +61,28 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.bottomArea}>
             <Text style={styles.label}>Escolha sua cidade:</Text>
+            
+            {/* 🔴 3. Passa o controle remoto (ref) para o Select */}
             <Select
+              ref={selectRef}
               placeholder="Escolha sua cidade"
-              options={["Iporã do Oeste", "São Miguel do Oeste"]}
-              onSelect={(value) => console.log(value)}
+              options={["Iporã do Oeste", "São Miguel do Oeste", "Itapiranga"]}
+              onSelect={(value) => {
+                useAuthStore.getState().setCidadeSelecionada(value);
+              }}
             />
+            
             <View style={styles.buttons}>
               <TouchableOpacity
                 style={styles.primaryButton}
-                onPress={() => router.push("/login")}
+                onPress={() => handleNavigation("/login")} // 🔴 Usa a nova função
               >
                 <Text style={styles.primaryText}>Entrar</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity
                 style={styles.secondaryButton}
-                onPress={() => router.push("/cadastro")}
+                onPress={() => handleNavigation("/cadastro")} // 🔴 Usa a nova função
               >
                 <Text style={styles.secondaryText}>Criar conta</Text>
               </TouchableOpacity>

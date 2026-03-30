@@ -1,7 +1,11 @@
+import axios from "axios";
+import { useAuthStore } from "./src/store/useAuthStore";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Keyboard,
   StyleSheet,
@@ -13,17 +17,20 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Input } from "./src/components/Input";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
-import { useRouter } from "expo-router";
 
 export default function Login() {
   const router = useRouter(); 
-  
+  const login = useAuthStore((state) => state.login);
+  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);// Puxa a função de salvar na memória
+
   const [loadedImages, setLoadedImages] = useState(0);
   const TOTAL_IMAGES = 3;
-  
+
   const [phone, setPhone] = useState("");
   const [phoneRaw, setPhoneRaw] = useState("");
   const [password, setPassword] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const [errors, setErrors] = useState({
     phone: "",
@@ -51,6 +58,44 @@ export default function Login() {
 
   function handleImageLoad() {
     setLoadedImages((prev) => prev + 1);
+  }
+
+  // 3. FUNÇÃO QUE FALA COM O JAVA PARA FAZER O LOGIN
+  async function handleLogin() {
+    if (!validate()) return;
+    
+    // Trava de segurança: Se a pessoa chegou no login sem cidade, manda voltar
+    if (!cidadeSelecionada) {
+      Alert.alert("Atenção", "Por favor, volte e escolha a sua cidade na tela inicial.");
+      return;
+    }
+    
+    setIsLoading(true);
+
+    try {
+      const url = "http://192.168.1.17:8080/api/cidadaos/login"; // USE O SEU IP
+      
+      const dadosDeLogin = {
+        telefone: phoneRaw,
+        senha: password,
+        cidade: cidadeSelecionada // 🔴 AGORA ENVIA A CIDADE TAMBÉM!
+      };
+
+      const response = await axios.post(url, dadosDeLogin);
+      
+      login(response.data); 
+      router.replace("/home");
+
+    } catch (error: any) {
+      console.log("Erro no login:", error);
+      if (error.response && error.response.status === 401) {
+        Alert.alert("Acesso Negado", "Número de celular ou senha incorretos.");
+      } else {
+        Alert.alert("Erro de Conexão", "Não foi possível conectar ao servidor. Verifique sua rede.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -100,7 +145,7 @@ export default function Login() {
               />
 
               <Image
-                source={require("../assets/images/cor2.jpg")}
+                source={require("../assets/images/logoeuamoipora.png")}
                 style={styles.logo}
                 onLoadEnd={handleImageLoad}
               />
@@ -147,16 +192,18 @@ export default function Login() {
               onChangeText={(text) => setPassword(text)}
             />
             <Text style={styles.textoEsqueceu}>Esqueceu sua senha?</Text>
+
+            {/* 4. BOTÃO ATUALIZADO COM CARREGAMENTO */}
             <TouchableOpacity
               style={styles.button}
-              onPress={() => {
-                if (validate()) {
-                  console.log("Tudo válido");
-                  router.push("/home")
-                }
-              }}
+              onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.buttonText}>Entrar</Text>
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#FFF" />
+              ) : (
+                <Text style={styles.buttonText}>Entrar</Text>
+              )}
             </TouchableOpacity>
 
             <Text

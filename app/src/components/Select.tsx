@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Pressable
 } from "react-native";
 
-import { scale, verticalScale, moderateScale } from "../utils/responsive";
+import { scale, moderateScale } from "../utils/responsive";
 
 type Props = {
   options: string[];
@@ -16,17 +16,27 @@ type Props = {
   onSelect?: (value: string) => void;
 };
 
-export function Select({
+// 🔴 1. CRIAMOS O "CONTROLE REMOTO" PARA EXPORTAR
+export interface SelectRef {
+  openDropdown: () => void;
+}
+
+// 🔴 2. ENVOLVEMOS O COMPONENTE COM forwardRef
+export const Select = forwardRef<SelectRef, Props>(({
   options,
   placeholder = "Selecione uma opção",
   onSelect
-}: Props) {
+}, ref) => {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState("");
 
   const animation = useRef(new Animated.Value(0)).current;
 
-  // animação abrir/fechar
+  // 🔴 3. ENTREGAMOS O BOTÃO DE ABRIR PARA O CONTROLE REMOTO
+  useImperativeHandle(ref, () => ({
+    openDropdown: () => setOpen(true)
+  }));
+
   useEffect(() => {
     Animated.timing(animation, {
       toValue: open ? 1 : 0,
@@ -35,13 +45,11 @@ export function Select({
     }).start();
   }, [open]);
 
-  // altura animada
   const heightInterpolate = animation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, options.length * 45]
   });
 
-  // rotação da seta
   const rotateInterpolate = animation.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "180deg"]
@@ -62,7 +70,7 @@ export function Select({
         />
       )}
 
-      <View>
+      <View style={{ zIndex: 10 }}>
         <TouchableOpacity
           style={styles.select}
           onPress={() => setOpen(!open)}
@@ -71,21 +79,14 @@ export function Select({
             {selected || placeholder}
           </Text>
 
-          {/* Seta animada */}
           <Animated.Text
-            style={[
-              styles.icon,
-              { transform: [{ rotate: rotateInterpolate }] }
-            ]}
+            style={[styles.icon, { transform: [{ rotate: rotateInterpolate }] }]}
           >
             ▼
           </Animated.Text>
         </TouchableOpacity>
 
-        {/* Dropdown animado */}
-        <Animated.View
-          style={[styles.dropdown, { height: heightInterpolate }]}
-        >
+        <Animated.View style={[styles.dropdown, { height: heightInterpolate }]}>
           {options.map((item) => (
             <TouchableOpacity
               key={item}
@@ -99,7 +100,8 @@ export function Select({
       </View>
     </>
   );
-}
+});
+Select.displayName = "Select";
 
 const styles = StyleSheet.create({
   select: {
@@ -107,34 +109,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F2F2",
     borderRadius: moderateScale(10),
     paddingHorizontal: scale(16),
-
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between"
   },
-
-  text: {
-    fontSize: moderateScale(16),
-    color: "#333"
-  },
-
-  icon: {
-    fontSize: moderateScale(14),
-    color: "#666"
-  },
-
+  text: { fontSize: moderateScale(16), color: "#333" },
+  icon: { fontSize: moderateScale(14), color: "#666" },
   dropdown: {
     overflow: "hidden",
     backgroundColor: "#fff",
     borderRadius: moderateScale(10),
     marginTop: 5,
-    elevation: 3
+    elevation: 3,
+    position: 'absolute', // Faz o menu flutuar por cima dos botões
+    top: moderateScale(50),
+    left: 0,
+    right: 0,
+    zIndex: 999,
   },
-
-  option: {
-    height: 45,
-    justifyContent: "center",
-    paddingHorizontal: scale(16)
-  }
-  
+  option: { height: 45, justifyContent: "center", paddingHorizontal: scale(16) }
 });

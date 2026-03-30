@@ -1,89 +1,109 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import axios from "axios";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
+import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
 
-// 1. TIPAGEM ESTRITA (Profissionalismo em TypeScript)
+// 1. TIPAGEM ESTRITA (Agora a bater certo com o Java)
 interface Report {
-  id: string;
-  category: string;
-  date: string;
-  location: string;
-  status: "Pendente" | "Em andamento" | "Resolvido";
-  imageUrl: any; // Mudar para 'string' quando vier do banco de dados (URL da nuvem)
+  id: number;
+  categoria: string;
+  dataCriacao: string;
+  localizacao: string;
+  status: "PENDENTE" | "EM_ANDAMENTO" | "RESOLVIDO";
+  urlImagem: string;
 }
 
-// 2. DADOS MOCKADOS (Simulando o Banco de Dados)
-const MOCK_MEUS_REPORTOS: Report[] = [
-  {
-    id: "1",
-    category: "Infraestrutura",
-    date: "24 Mar 2026",
-    location: "Rua das Flores, Centro",
-    status: "Pendente",
-    imageUrl: require("../assets/images/infra.png"),
-  },
-  {
-    id: "2",
-    category: "Iluminação",
-    date: "10 Fev 2026",
-    location: "Av. Principal, nº 400",
-    status: "Resolvido",
-    imageUrl: require("../assets/images/ilum.png"),
-  },
-];
-
-const MOCK_SETOR_REPORTOS: Report[] = [
-  {
-    id: "3",
-    category: "Infraestrutura",
-    date: "26 Mar 2026",
-    location: "Bairro São José",
-    status: "Em andamento",
-    imageUrl: require("../assets/images/infra.png"),
-  },
-];
-
 export default function Reportos() {
-  // Controle de Abas Internas (Cidadão vs Servidor)
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"meus" | "setor">("meus");
 
-  const isFuncionarioPrefeitura = true;
+  // 🔴 NOVOS ESTADOS PARA A INTEGRAÇÃO
+  const [meusReportos, setMeusReportos] = useState<Report[]>([]);
+  const [reportosSetor, setReportosSetor] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getStatusColor = (status: Report["status"]) => {
+  const user = useAuthStore((state) => state.user); // Puxa o cidadão logado
+  const isFuncionarioPrefeitura = true; // Mude para true depois se quiser testar a outra aba
+
+  // 🔴 FUNÇÃO QUE VAI BUSCAR OS DADOS AO JAVA
+  async function carregarReportos() {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      // ⚠️ ATENÇÃO: Troque para o seu IP!
+      const url = `http://192.168.1.17:8080/api/solicitacoes/cidadao/${user.id}`;
+      const response = await axios.get(url);
+
+      setMeusReportos(response.data); // Guarda a lista vinda da base de dados
+    } catch (error) {
+      console.log("Erro ao buscar reportos:", error);
+      Alert.alert("Erro", "Não foi possível carregar as suas solicitações.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 🔴 Chama a função assim que o ecrã abre
+  useEffect(() => {
+    carregarReportos();
+  }, []);
+
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case "Resolvido":
+      case "RESOLVIDO":
         return "#4CAF50";
-      case "Em andamento":
+      case "EM_ANDAMENTO":
         return "#FFC107";
-      case "Pendente":
+      case "PENDENTE":
       default:
         return "#F44336";
     }
   };
 
+  // Função para formatar a data que vem do Java (ex: 2026-03-30T10:30:00 -> 30/03/2026)
+  const formatarData = (dataString: string) => {
+    if (!dataString) return "";
+    const data = new Date(dataString);
+    return data.toLocaleDateString("pt-BR");
+  };
+
   // Componente de renderização de CADA item da lista
   const renderItem = ({ item }: { item: Report }) => (
-    <View style={styles.card}>
-      <Image
-        source={item.imageUrl}
-        style={styles.thumbnail}
-        resizeMode="cover"
-      />
+    <TouchableOpacity 
+      style={styles.card} 
+      activeOpacity={0.7}
+      onPress={() => {
+        router.push({
+          pathname: "/detalhes",
+          params: { 
+            dados: JSON.stringify(item),
+            origem: activeTab // 🔴 MÁGICA: Avisamos se ele clicou em "meus" ou "setor"
+          }
+        });
+      }}
+    >
+      <View style={styles.thumbnailContainer}>
+        <Ionicons name="image-outline" size={30} color="#999" />
+      </View>
 
       <View style={styles.cardInfo}>
         <View style={styles.cardHeader}>
-          <Text style={styles.categoryTitle}>{item.category}</Text>
-          <Text style={styles.dateText}>{item.date}</Text>
+          <Text style={styles.categoryTitle}>{item.categoria}</Text>
+          <Text style={styles.dateText}>{formatarData(item.dataCriacao)}</Text>
         </View>
 
         <View style={styles.locationRow}>
@@ -93,7 +113,7 @@ export default function Reportos() {
             color="#666"
           />
           <Text style={styles.locationText} numberOfLines={1}>
-            {item.location}
+            {item.localizacao}
           </Text>
         </View>
 
@@ -104,10 +124,11 @@ export default function Reportos() {
               { backgroundColor: getStatusColor(item.status) },
             ]}
           />
-          <Text style={styles.statusText}>{item.status}</Text>
+          {/* Formata o texto para ficar bonito: EM_ANDAMENTO -> Em andamento */}
+          <Text style={styles.statusText}>{item.status.replace("_", " ")}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -115,7 +136,6 @@ export default function Reportos() {
       <View style={styles.container}>
         <Text style={styles.pageTitle}>Solicitações</Text>
 
-        {/* CONTROLE DE ABAS funcionário */}
         {isFuncionarioPrefeitura && (
           <View style={styles.tabContainer}>
             <TouchableOpacity
@@ -134,7 +154,6 @@ export default function Reportos() {
                 Meus Reportos
               </Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[
                 styles.tabButton,
@@ -153,20 +172,29 @@ export default function Reportos() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* LISTA DE REPORTOS */}
-        <FlatList
-          data={activeTab === "meus" ? MOCK_MEUS_REPORTOS : MOCK_SETOR_REPORTOS}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              Nenhuma solicitação encontrada.
-            </Text>
-          }
-        />
+        {/*  LISTA DINÂMICA INTELIGENTE */}
+        {isLoading ? (
+          <ActivityIndicator
+            size="large"
+            color="#1F41BB"
+            style={{ marginTop: verticalScale(50) }}
+          />
+        ) : (
+          <FlatList
+            data={activeTab === "meus" ? meusReportos : reportosSetor}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                {activeTab === "meus"
+                  ? "Você ainda não fez nenhuma solicitação."
+                  : "Nenhuma solicitação recebida no seu setor."}
+              </Text>
+            }
+          />
+        )}
       </View>
 
       <BottomMenu activeRoute="reportos" />
@@ -189,7 +217,6 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(20),
     marginTop: verticalScale(20),
   },
-
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "#E0E5E8",
@@ -213,7 +240,6 @@ const styles = StyleSheet.create({
   },
   tabText: { fontSize: moderateScale(14), fontWeight: "600", color: "#666" },
   tabTextActive: { color: "#1F41BB" },
-
   listContent: { paddingBottom: verticalScale(100) },
   emptyText: {
     textAlign: "center",
@@ -233,12 +259,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  thumbnail: {
+
+  // Substitui a Imagem direta por um container cinza com ícone provisório
+  thumbnailContainer: {
     width: scale(70),
     height: scale(70),
     borderRadius: moderateScale(8),
     backgroundColor: "#F0F0F0",
+    justifyContent: "center",
+    alignItems: "center",
   },
+
   cardInfo: { flex: 1, marginLeft: scale(12), justifyContent: "space-between" },
   cardHeader: {
     flexDirection: "row",
@@ -274,5 +305,10 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(5),
     marginRight: scale(6),
   },
-  statusText: { fontSize: moderateScale(13), fontWeight: "600", color: "#444" },
+  statusText: {
+    fontSize: moderateScale(13),
+    fontWeight: "600",
+    color: "#444",
+    textTransform: "capitalize",
+  },
 });

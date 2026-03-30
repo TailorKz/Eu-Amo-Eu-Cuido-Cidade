@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "./src/store/useAuthStore";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -16,6 +17,7 @@ import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
 export default function Perfil() {
   const [modalVisible, setModalVisible] = useState(false);
   const [actionType, setActionType] = useState<"phone" | "password" | "delete">("phone");
+  const logout = useAuthStore((state) => state.logout);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -120,7 +122,10 @@ export default function Perfil() {
           {/* BOTÃO DE SAIR NO FUNDO DA PÁGINA */}
           <TouchableOpacity
             style={styles.logoutButton}
-            onPress={() => router.replace("/login")}
+            onPress={() => {
+              logout(); // 1. Apaga os dados do HD do celular
+              router.replace("/"); // 2. Manda de volta pra tela inicial
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="log-out-outline" size={moderateScale(22)} color="#ffffff" />

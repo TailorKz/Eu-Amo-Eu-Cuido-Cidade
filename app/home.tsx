@@ -8,6 +8,9 @@ import {
 import { BottomMenu } from "./src/components/BottomMenu";
 import { router } from "expo-router";
 
+// 1. ADICIONE A IMPORTAÇÃO DO GRADIENTE
+import { LinearGradient } from "expo-linear-gradient";
+
 const menuItems = [
   {
     title: "Infraestrutura",
@@ -38,12 +41,19 @@ const menuItems = [
 export default function Home() {
   return (
     <View style={styles.container}>
+      {/* 2. GRADIENTE DE FUNDO (Fica atrás de tudo por causa do position absolute) */}
+      <LinearGradient
+        // Começa com um azul bem leve e transparente (baseado no seu azul #1F41BB) e vai para 100% transparente
+        colors={["rgba(2, 154, 255, 0.25)", "transparent"]} 
+        style={styles.headerGradient}
+      />
+
       {/* HEADER */}
       <View style={styles.banner}>
         <Text style={styles.name}>Olá Tailor!</Text>
 
         <Image
-          source={require("../assets/images/euamoipora.png")}
+          source={require("../assets/images/logoeuamoipora.png")}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -61,7 +71,7 @@ export default function Home() {
             onPress={() =>
               router.push({
                 pathname: "/solicitacao",
-                params: { categoria: item.title.replace("\n", " ") }, // Tira a quebra de linha do título
+                params: { categoria: item.title.replace("\n", " ") }, 
               })
             }
           >
@@ -73,7 +83,6 @@ export default function Home() {
         ))}
       </View>
 
-      {/* AQUI ESTÁ A MÁGICA: O menu velho sumiu, e usamos só o componente novo */}
       <BottomMenu activeRoute="home" />
     </View>
   );
@@ -85,13 +94,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4F7F8",
     paddingHorizontal: scale(16),
     paddingTop: verticalScale(40),
-    paddingBottom: verticalScale(80), // Isso garante que os últimos botões não fiquem escondidos atrás do menu
+    paddingBottom: verticalScale(80), 
+  },
+
+  // 3. ESTILO NOVO DO GRADIENTE
+  headerGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: verticalScale(200), // Altura que o gradiente vai descer antes de sumir totalmente
+    zIndex: 0, // Garante que fique atrás do texto
   },
 
   banner: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    zIndex: 1, // Garante que o texto fique por cima do gradiente
   },
 
   name: {
@@ -112,12 +132,14 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(20),
     marginBottom: verticalScale(20),
     textAlign: "center",
+    zIndex: 1, 
   },
 
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    zIndex: 1,
   },
 
   card: {
@@ -149,6 +171,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
   },
-
-  // Note que apaguei totalmente os estilos "bottomMenu", "menuItem" e "menuText" que estavam sobrando aqui.
 });

@@ -1,8 +1,10 @@
-import { useRouter } from "expo-router";
+import axios from "axios"; // IMPORTAMOS O AXIOS
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Keyboard,
   StyleSheet,
@@ -13,45 +15,94 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Input } from "./src/components/Input";
+import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
-const router = useRouter();
-
 export default function Cadastro() {
+  const router = useRouter();
+  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
+  const login = useAuthStore((state) => state.login);
   const [loadedImages, setLoadedImages] = useState(0);
-
   const TOTAL_IMAGES = 3;
+  const [nome, setNome] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneRaw, setPhoneRaw] = useState("");
-
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false); // Estado de carregamento do botão
 
   const [errors, setErrors] = useState({
+    nome: "",
     phone: "",
     password: "",
   });
 
   function validate() {
-    let newErrors = {
-      phone: "",
-      password: "",
-    };
+    let newErrors = { nome: "", phone: "", password: "" };
 
-    if (phoneRaw.length !== 11) {
-      newErrors.phone = "Número inválido";
-    }
-
-    if (password.length < 8) {
-      newErrors.password = "Senha deve ter 8 caracteres";
-    }
+    if (nome.trim().length < 3) newErrors.nome = "Nome é obrigatório";
+    if (phoneRaw.length !== 11) newErrors.phone = "Número inválido";
+    if (password.length < 8) newErrors.password = "Mínimo de 8 caracteres";
+    if (password !== confirmPassword)
+      newErrors.password = "As senhas não coincidem";
 
     setErrors(newErrors);
-
-    return !newErrors.phone && !newErrors.password;
+    return !newErrors.nome && !newErrors.phone && !newErrors.password;
   }
 
   function handleImageLoad() {
     setLoadedImages((prev) => prev + 1);
+  }
+  async function handleCadastro() {
+    if (!validate()) return;
+
+    if (!cidadeSelecionada) {
+      Alert.alert(
+        "Atenção",
+        "Por favor, volte e escolha a sua cidade na tela inicial.",
+      );
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const url = "http://192.168.1.17:8080/api/cidadaos/cadastrar"; // USE O SEU IP
+
+      const dadosParaEnviar = {
+        nome: nome,
+        telefone: phoneRaw,
+        senha: password,
+        cidade: cidadeSelecionada, //  ENVIA A CIDADE ESCOLHIDA
+      };
+
+      const response = await axios.post(url, dadosParaEnviar);
+
+      login(response.data);
+      
+      Alert.alert(
+        "Sucesso!", 
+        "A sua conta foi criada com sucesso.", 
+        [{ text: "OK", onPress: () => router.replace("/home") }] // Vai para a Home!
+      );
+    } catch (error: any) {
+      console.log("Erro no cadastro:", error);
+      if (error.response && error.response.status === 400) {
+        // este erro só acontece se tentar repetir o número NA MESMA CIDADE
+        Alert.alert(
+          "Atenção",
+          "Este número de celular já está registrado nesta cidade.",
+        );
+      } else {
+        Alert.alert(
+          "Erro de Conexão",
+          "Não foi possível comunicar com os servidores.",
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -65,7 +116,6 @@ export default function Cadastro() {
               resizeMode="cover"
               onLoadEnd={handleImageLoad}
             />
-
             <LinearGradient
               colors={[
                 "rgba(237,237,237,1)",
@@ -80,9 +130,9 @@ export default function Cadastro() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             enableOnAndroid={true}
-            extraScrollHeight={0}
+            extraScrollHeight={verticalScale(80)}
             bounces={false}
-            overScrollMode="never"
+            showsVerticalScrollIndicator={false}
           >
             <View style={styles.top}>
               <LinearGradient
@@ -99,19 +149,24 @@ export default function Cadastro() {
                 style={styles.logoMunicipio}
                 onLoadEnd={handleImageLoad}
               />
-
               <Image
-                source={require("../assets/images/cor2.jpg")}
+                source={require("../assets/images/logoeuamoipora.png")}
                 style={styles.logo}
                 onLoadEnd={handleImageLoad}
               />
-
               <Text style={styles.textoCuidado}>
                 O cuidado com a cidade na palma da sua mão.
               </Text>
             </View>
 
-            <Input placeholder="Nome completo:" icon="person-outline" />
+            <Input
+              placeholder="Nome completo:"
+              icon="person-outline"
+              value={nome}
+              error={errors.nome}
+              onChangeText={setNome}
+            />
+
             <Input
               placeholder="Número:"
               icon="logo-whatsapp"
@@ -140,6 +195,7 @@ export default function Cadastro() {
                 /\d/,
               ]}
             />
+
             <Input
               placeholder="Senha:"
               icon="lock-closed-outline"
@@ -148,21 +204,26 @@ export default function Cadastro() {
               error={errors.password}
               onChangeText={(text) => setPassword(text)}
             />
+
             <Input
               placeholder="Confirme a senha:"
               icon="lock-closed-outline"
               secureTextEntry
+              value={confirmPassword}
+              onChangeText={(text) => setConfirmPassword(text)}
             />
 
+            {/* BOTÃO ATUALIZADO */}
             <TouchableOpacity
               style={styles.button}
-              onPress={() => {
-                if (validate()) {
-                  router.push("/");
-                }
-              }}
+              onPress={handleCadastro}
+              disabled={isLoading}
             >
-              <Text style={styles.buttonText}>Entrar</Text>
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#FFF" />
+              ) : (
+                <Text style={styles.buttonText}>Cadastrar</Text>
+              )}
             </TouchableOpacity>
 
             <Text
@@ -185,16 +246,10 @@ export default function Cadastro() {
 }
 
 const styles = StyleSheet.create({
+  // MANTIVE EXATAMENTE OS SEUS ESTILOS PARA NÃO ESTRAGAR NADA
   top: {},
-  container: {
-    flex: 1,
-    position: "relative",
-    backgroundColor: "#EDEDED",
-  },
-  content: {
-    paddingBottom: verticalScale(200),
-    zIndex: 1,
-  },
+  container: { flex: 1, position: "relative", backgroundColor: "#EDEDED" },
+  content: { paddingBottom: verticalScale(200), zIndex: 1 },
   background: {
     position: "absolute",
     left: 0,
@@ -229,9 +284,6 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(20),
     textAlign: "center",
   },
-  inputContainer: {},
-  textoInput: {},
-
   button: {
     height: moderateScale(60),
     width: "80%",
@@ -264,10 +316,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 0,
   },
-  footerImage: {
-    width: "100%",
-    height: Math.min(verticalScale(320), 340),
-  },
+  footerImage: { width: "100%", height: Math.min(verticalScale(320), 340) },
   gradientOverlay: {
     position: "absolute",
     top: 0,
@@ -275,7 +324,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: "100%",
   },
-  //LOADING
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",

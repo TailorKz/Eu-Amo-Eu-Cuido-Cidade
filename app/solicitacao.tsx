@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import { useAuthStore } from "./src/store/useAuthStore";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -20,7 +22,7 @@ export default function Solicitacao() {
   const params = useLocalSearchParams();
   const categoria = params.categoria || "Geral";
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
-
+const user = useAuthStore((state) => state.user);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [locationText, setLocationText] = useState("");
   const [observation, setObservation] = useState("");
@@ -117,7 +119,7 @@ export default function Solicitacao() {
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!imageUri) {
       Alert.alert("Atenção", "Por favor, tire uma foto do problema.");
       return;
@@ -126,18 +128,41 @@ export default function Solicitacao() {
       Alert.alert("Atenção", "A localização não pode ficar vazia.");
       return;
     }
+    if (!user) {
+      Alert.alert("Erro", "Você precisa estar logado para enviar uma solicitação.");
+      return;
+    }
 
     setIsSubmitting(true);
 
-    // Simula o tempo de envio para o Backend em Java
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // ⚠️ ATENÇÃO: Troque pelo seu IP! Note que passamos o ID do usuário na URL
+      const url = `http://192.168.1.17:8080/api/solicitacoes/nova/${user.id}`;
+      
+      // Monta a "encomenda" com os dados da tela
+      const dadosSolicitacao = {
+        categoria: categoria,
+        localizacao: locationText,
+        observacao: observation,
+        // Por enquanto, mandamos um texto fixo até implementarmos o servidor de imagens
+        urlImagem: "https://minhanuvem.com/imagem_temporaria.jpg" 
+      };
+
+      // Envia para o Java!
+      await axios.post(url, dadosSolicitacao);
+      
       Alert.alert(
         "Sucesso!",
         "Sua solicitação foi enviada para a prefeitura.",
-        [{ text: "OK", onPress: () => router.replace("/home") }],
+        [{ text: "OK", onPress: () => router.replace("/home") }]
       );
-    }, 1500);
+
+    } catch (error) {
+      console.log("Erro ao enviar solicitação:", error);
+      Alert.alert("Erro", "Não foi possível enviar a solicitação. Tente novamente mais tarde.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
