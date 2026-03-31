@@ -4,19 +4,19 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
+  Image, // 🔴 Imagem importada corretamente
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
 
-// 1. TIPAGEM ESTRITA (Agora a bater certo com o Java)
+// TIPAGEM ESTRITA
 interface Report {
   id: number;
   categoria: string;
@@ -30,36 +30,57 @@ export default function Reportos() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"meus" | "setor">("meus");
 
-  // 🔴 NOVOS ESTADOS PARA A INTEGRAÇÃO
   const [meusReportos, setMeusReportos] = useState<Report[]>([]);
   const [reportosSetor, setReportosSetor] = useState<Report[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // 🔴 ESTADO DO PULL-TO-REFRESH
 
-  const user = useAuthStore((state) => state.user); // Puxa o cidadão logado
-  const isFuncionarioPrefeitura = true; // Mude para true depois se quiser testar a outra aba
+  const user = useAuthStore((state) => state.user);
 
-  // 🔴 FUNÇÃO QUE VAI BUSCAR OS DADOS AO JAVA
-  async function carregarReportos() {
+  // 🔴 SIMULAÇÃO DE FUNCIONÁRIO DA PREFEITURA
+  const isFuncionarioPrefeitura = true;
+  const meuSetor = "Infraestrutura";
+
+  async function carregarMeusReportos() {
     if (!user) return;
-
-    setIsLoading(true);
     try {
-      // ⚠️ ATENÇÃO: Troque para o seu IP!
       const url = `http://192.168.1.17:8080/api/solicitacoes/cidadao/${user.id}`;
       const response = await axios.get(url);
-
-      setMeusReportos(response.data); // Guarda a lista vinda da base de dados
+      setMeusReportos(response.data);
     } catch (error) {
-      console.log("Erro ao buscar reportos:", error);
-      Alert.alert("Erro", "Não foi possível carregar as suas solicitações.");
-    } finally {
-      setIsLoading(false);
+      console.log("Erro ao buscar meus reportos:", error);
     }
   }
 
-  // 🔴 Chama a função assim que o ecrã abre
+  async function carregarReportosDoSetor() {
+    if (!isFuncionarioPrefeitura) return;
+    try {
+      const url = `http://192.168.1.17:8080/api/solicitacoes/setor/${meuSetor}`;
+      const response = await axios.get(url);
+      setReportosSetor(response.data);
+    } catch (error) {
+      console.log("Erro ao buscar reportos do setor:", error);
+    }
+  }
+
+  async function carregarTudo() {
+    setIsLoading(true);
+    await carregarMeusReportos();
+    await carregarReportosDoSetor();
+    setIsLoading(false);
+  }
+
+  // 🔴 FUNÇÃO EXECUTADA AO PUXAR A TELA PARA BAIXO
+  async function onRefresh() {
+    setIsRefreshing(true);
+    await carregarMeusReportos();
+    await carregarReportosDoSetor();
+    setIsRefreshing(false);
+  }
+
   useEffect(() => {
-    carregarReportos();
+    carregarTudo();
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -74,30 +95,44 @@ export default function Reportos() {
     }
   };
 
-  // Função para formatar a data que vem do Java (ex: 2026-03-30T10:30:00 -> 30/03/2026)
   const formatarData = (dataString: string) => {
     if (!dataString) return "";
     const data = new Date(dataString);
     return data.toLocaleDateString("pt-BR");
   };
 
-  // Componente de renderização de CADA item da lista
+  // 🔴 MÁGICA: Converte o caminho do computador para a URL da internet
+  const getMiniaturaUrl = (urlOriginal: string) => {
+    if (!urlOriginal) return null;
+    return urlOriginal.replace(
+      "file:///C:/ipora_imagens/",
+      "http://192.168.1.17:8080/imagens/",
+    );
+  };
+
   const renderItem = ({ item }: { item: Report }) => (
-    <TouchableOpacity 
-      style={styles.card} 
+    <TouchableOpacity
+      style={styles.card}
       activeOpacity={0.7}
       onPress={() => {
         router.push({
           pathname: "/detalhes",
-          params: { 
+          params: {
             dados: JSON.stringify(item),
-            origem: activeTab // 🔴 MÁGICA: Avisamos se ele clicou em "meus" ou "setor"
-          }
+            origem: activeTab,
+          },
         });
       }}
     >
       <View style={styles.thumbnailContainer}>
-        <Ionicons name="image-outline" size={30} color="#999" />
+        {getMiniaturaUrl(item.urlImagem) ? (
+          <Image
+            source={{ uri: getMiniaturaUrl(item.urlImagem) as string }} // 🔴 FIX DO TYPESCRIPT ('as string')
+            style={{ width: "100%", height: "100%", borderRadius: 8 }}
+          />
+        ) : (
+          <Ionicons name="image-outline" size={30} color="#999" />
+        )}
       </View>
 
       <View style={styles.cardInfo}>
@@ -124,7 +159,6 @@ export default function Reportos() {
               { backgroundColor: getStatusColor(item.status) },
             ]}
           />
-          {/* Formata o texto para ficar bonito: EM_ANDAMENTO -> Em andamento */}
           <Text style={styles.statusText}>{item.status.replace("_", " ")}</Text>
         </View>
       </View>
@@ -172,7 +206,7 @@ export default function Reportos() {
             </TouchableOpacity>
           </View>
         )}
-        {/*  LISTA DINÂMICA INTELIGENTE */}
+
         {isLoading ? (
           <ActivityIndicator
             size="large"
@@ -186,6 +220,8 @@ export default function Reportos() {
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshing={isRefreshing} // 🔴 LIGA A ANIMAÇÃO DE REFRESH
+            onRefresh={onRefresh} // 🔴 LIGA A FUNÇÃO DE REFRESH
             ListEmptyComponent={
               <Text style={styles.emptyText}>
                 {activeTab === "meus"
@@ -259,8 +295,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-
-  // Substitui a Imagem direta por um container cinza com ícone provisório
   thumbnailContainer: {
     width: scale(70),
     height: scale(70),
@@ -269,7 +303,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   cardInfo: { flex: 1, marginLeft: scale(12), justifyContent: "space-between" },
   cardHeader: {
     flexDirection: "row",

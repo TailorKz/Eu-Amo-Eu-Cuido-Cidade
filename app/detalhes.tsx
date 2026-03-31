@@ -2,18 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView, // ✅ MUDANÇA: import nativo
-    Platform, // ✅ MUDANÇA: para detectar iOS/Android
-    ScrollView, // ✅ MUDANÇA: ScrollView simples
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal, // ✅ MUDANÇA: import nativo
+  Platform, // ✅ MUDANÇA: para detectar iOS/Android
+  ScrollView, // ✅ MUDANÇA: ScrollView simples
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 // ✅ MUDANÇA: removido o import do KeyboardAwareScrollView
+import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Select } from "./src/components/Select";
 import { useAuthStore } from "./src/store/useAuthStore";
@@ -29,11 +31,34 @@ export default function Detalhes() {
 
   const scrollRef = useRef<ScrollView>(null);
 
+  // ESTADOS NORMAIS
   const [isEditing, setIsEditing] = useState(false);
-  const [editLocalizacao, setEditLocalizacao] = useState(chamado?.localizacao || "");
-  const [editObservacao, setEditObservacao] = useState(chamado?.observacao || "");
+  const [editLocalizacao, setEditLocalizacao] = useState(
+    chamado?.localizacao || "",
+  );
+  const [editObservacao, setEditObservacao] = useState(
+    chamado?.observacao || "",
+  );
   const [novoStatus, setNovoStatus] = useState(chamado?.status || "");
-  const [respostaPrefeitura, setRespostaPrefeitura] = useState("");
+
+  // 🔴 ESTADOS PARA AS MODAIS E RESPOSTAS
+  const [respostaPrefeitura, setRespostaPrefeitura] = useState(
+    chamado?.resposta || "",
+  );
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  const [isSetorModalVisible, setIsSetorModalVisible] = useState(false);
+  const [setorSelecionado, setSetorSelecionado] = useState(
+    chamado?.categoria || "",
+  );
+
+  const listaSetores = [
+    "Infraestrutura",
+    "Iluminação Pública",
+    "Urbanismo",
+    "Limpeza",
+    "Saneamento e água",
+    "Saúde Pública e Vigilância",
+  ];
 
   const observacaoRef = useRef<View>(null);
   const respostaRef = useRef<View>(null);
@@ -49,10 +74,31 @@ export default function Detalhes() {
       </SafeAreaView>
     );
   }
+  const getImagemUrl = () => {
+    if (!chamado.urlImagem) return null;
+    return chamado.urlImagem.replace(
+      "file:///C:/ipora_imagens/",
+      "http://192.168.1.17:8080/imagens/",
+    );
+  };
 
-  const handleSalvarEdicao = () => {
-    Alert.alert("Sucesso", "Solicitação atualizada!");
-    setIsEditing(false);
+  // --- FUNÇÕES DE AÇÃO (Conectadas ao Java) ---
+
+  const handleSalvarEdicao = async () => {
+    try {
+      const url = `http://192.168.1.17:8080/api/solicitacoes/${chamado.id}`;
+      await axios.put(url, {
+        localizacao: editLocalizacao,
+        observacao: editObservacao,
+      });
+      Alert.alert("Sucesso", "Solicitação atualizada com sucesso!");
+      setIsEditing(false);
+      chamado.localizacao = editLocalizacao;
+      chamado.observacao = editObservacao;
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Erro", "Não foi possível atualizar a solicitação.");
+    }
   };
 
   const handleExcluir = () => {
@@ -61,17 +107,36 @@ export default function Detalhes() {
       {
         text: "Sim, Excluir",
         style: "destructive",
-        onPress: () => {
-          Alert.alert("Excluído", "Solicitação removida.");
-          router.back();
+        onPress: async () => {
+          try {
+            const url = `http://192.168.1.17:8080/api/solicitacoes/${chamado.id}`;
+            await axios.delete(url);
+            Alert.alert("Excluído", "Solicitação removida.");
+            router.replace("/reportos");
+          } catch (error) {
+            console.log(error);
+            Alert.alert("Erro", "Não foi possível excluir.");
+          }
         },
       },
     ]);
   };
 
-  const handleAtualizarFuncionario = () => {
-    Alert.alert("Atualizado!", "Status alterado e cidadão notificado.");
-    router.back();
+  const handleAtualizarFuncionario = async () => {
+    try {
+      const url = `http://192.168.1.17:8080/api/solicitacoes/${chamado.id}`;
+      //  ENVIA O STATUS, A NOVA CATEGORIA (SE MUDOU) E A RESPOSTA
+      await axios.put(url, {
+        status: novoStatus.replace(" ", "_"),
+        categoria: setorSelecionado,
+        resposta: respostaPrefeitura,
+      });
+      Alert.alert("Atualizado!", "Dados alterados com sucesso.");
+      router.replace("/reportos");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Erro", "Não foi possível atualizar os dados.");
+    }
   };
 
   return (
@@ -96,19 +161,30 @@ export default function Detalhes() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* 1. ÁREA DA IMAGEM */}
-          <View style={styles.imageContainer}>
-            <Image
-              source={require("../assets/images/infra.png")}
-              style={styles.image}
-            />
-            {isEditing && (
-              <TouchableOpacity style={styles.deletePhotoBtn}>
-                <Ionicons name="trash" size={20} color="#FFF" />
-                <Text style={styles.deletePhotoText}>Trocar Foto</Text>
-              </TouchableOpacity>
+          {/* 1. ÁREA DA IMAGEM (AGORA É CLICÁVEL) */}
+          <TouchableOpacity
+            style={styles.imageContainer}
+            activeOpacity={0.8}
+            onPress={() => setIsImageModalVisible(true)} // 🔴 ABRE A FOTO GIGANTE
+          >
+            {getImagemUrl() ? (
+              <Image
+                source={{ uri: getImagemUrl() as string }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              <Image
+                source={require("../assets/images/infra.png")}
+                style={styles.image}
+              />
             )}
-          </View>
+            {!isEditing && (
+              <View style={styles.expandIconOverlay}>
+                <Ionicons name="expand" size={20} color="#FFF" />
+              </View>
+            )}
+          </TouchableOpacity>
 
           {/* 2. INFORMAÇÕES BÁSICAS */}
           <View style={styles.infoCard}>
@@ -155,21 +231,21 @@ export default function Detalhes() {
             <Text style={[styles.label, { marginTop: 15 }]}>
               Observação do Cidadão
             </Text>
-
-            {/* ✅ onLayout somando o offset real da imagem + margins acima do card */}
             <View
-              ref={observacaoRef}
               onLayout={(e) => {
                 observacaoY.current =
                   e.nativeEvent.layout.y +
-                  verticalScale(200) + // altura da imagem
-                  verticalScale(15) +  // margin abaixo da imagem
-                  scale(16);           // padding interno do infoCard
+                  verticalScale(200) +
+                  verticalScale(15) +
+                  scale(16);
               }}
             >
               {isEditing ? (
                 <TextInput
-                  style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+                  style={[
+                    styles.input,
+                    { height: 80, textAlignVertical: "top" },
+                  ]}
                   multiline
                   value={editObservacao}
                   onChangeText={setEditObservacao}
@@ -188,6 +264,16 @@ export default function Detalhes() {
                 </Text>
               )}
             </View>
+
+            {/* 🔴 RESPOSTA OFICIAL PARA O CIDADÃO LER */}
+            {!isModoGestao && chamado.resposta && (
+              <View style={styles.respostaBox}>
+                <Text style={styles.respostaTitle}>
+                  <Ionicons name="business" size={16} /> Resposta da Prefeitura:
+                </Text>
+                <Text style={styles.respostaText}>{chamado.resposta}</Text>
+              </View>
+            )}
           </View>
 
           {/* 3A. VISÃO DO FUNCIONÁRIO */}
@@ -204,28 +290,27 @@ export default function Detalhes() {
                 />
               </View>
 
-              <Text style={styles.label}>Transferir de Setor (Opcional):</Text>
-              <View style={{ zIndex: 9, marginBottom: 15 }}>
-                <Select
-                  placeholder="Manter no setor atual"
-                  options={[
-                    "Infraestrutura",
-                    "Iluminação Pública",
-                    "Urbanismo",
-                    "Limpeza",
-                  ]}
-                />
-              </View>
+              <Text style={styles.label}>Transferir de Setor:</Text>
+              {/* 🔴 BOTÃO QUE ABRE A NOVA MODAL DE SETORES */}
+              <TouchableOpacity
+                style={styles.sectorButton}
+                onPress={() => setIsSetorModalVisible(true)}
+              >
+                <Text style={styles.sectorButtonText}>{setorSelecionado}</Text>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
 
               <Text style={styles.label}>Resposta Oficial ao Cidadão:</Text>
               <View
-                ref={respostaRef}
                 onLayout={(e) => {
                   respostaY.current = e.nativeEvent.layout.y;
                 }}
               >
                 <TextInput
-                  style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+                  style={[
+                    styles.input,
+                    { height: 80, textAlignVertical: "top" },
+                  ]}
                   multiline
                   placeholder="Ex: A equipe já foi enviada ao local..."
                   value={respostaPrefeitura}
@@ -255,21 +340,43 @@ export default function Detalhes() {
             <View style={styles.actionButtons}>
               {isEditing ? (
                 <>
-                  <TouchableOpacity style={styles.saveBtn} onPress={handleSalvarEdicao}>
+                  <TouchableOpacity
+                    style={styles.saveBtn}
+                    onPress={handleSalvarEdicao}
+                  >
                     <Text style={styles.saveBtnText}>Salvar Alterações</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditing(false)}>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
+                    onPress={() => setIsEditing(false)}
+                  >
                     <Text style={styles.cancelBtnText}>Cancelar</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(true)}>
-                    <Ionicons name="pencil" size={18} color="#FFF" style={{ marginRight: 8 }} />
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => setIsEditing(true)}
+                  >
+                    <Ionicons
+                      name="pencil"
+                      size={18}
+                      color="#FFF"
+                      style={{ marginRight: 8 }}
+                    />
                     <Text style={styles.saveBtnText}>Editar Solicitação</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.deleteBtn} onPress={handleExcluir}>
-                    <Ionicons name="trash" size={18} color="#FF3B30" style={{ marginRight: 8 }} />
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={handleExcluir}
+                  >
+                    <Ionicons
+                      name="trash"
+                      size={18}
+                      color="#FF3B30"
+                      style={{ marginRight: 8 }}
+                    />
                     <Text style={styles.deleteBtnText}>Excluir</Text>
                   </TouchableOpacity>
                 </>
@@ -278,6 +385,91 @@ export default function Detalhes() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ========================================== */}
+      {/* 🔴 MODAL 1: FOTO EM TELA CHEIA             */}
+      {/* ========================================== */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalPhotoOverlay}>
+          <TouchableOpacity
+            style={styles.closePhotoBtn}
+            onPress={() => setIsImageModalVisible(false)}
+          >
+            <Ionicons name="close-circle" size={36} color="#FFF" />
+          </TouchableOpacity>
+          {getImagemUrl() ? (
+            <Image
+              source={{ uri: getImagemUrl() as string }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <Image
+              source={require("../assets/images/infra.png")}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
+
+      {/* ========================================== */}
+      {/* 🔴 MODAL 2: TRANSFERIR SETOR               */}
+      {/* ========================================== */}
+      <Modal
+        visible={isSetorModalVisible}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalSectorOverlay}>
+          <View style={styles.modalSectorContent}>
+            <View style={styles.modalSectorHeader}>
+              <Text style={styles.modalSectorTitle}>Escolha o novo Setor</Text>
+              <TouchableOpacity onPress={() => setIsSetorModalVisible(false)}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {listaSetores.map((setorItem, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.sectorListItem,
+                    setorSelecionado === setorItem &&
+                      styles.sectorListItemActive,
+                  ]}
+                  onPress={() => {
+                    setSetorSelecionado(setorItem);
+                    setIsSetorModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.sectorListText,
+                      setorSelecionado === setorItem &&
+                        styles.sectorListTextActive,
+                    ]}
+                  >
+                    {setorItem}
+                  </Text>
+                  {setorSelecionado === setorItem && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color="#1F41BB"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -298,6 +490,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   container: { padding: scale(16), paddingBottom: verticalScale(50) },
+
   imageContainer: {
     width: "100%",
     height: verticalScale(200),
@@ -307,18 +500,15 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   image: { width: "100%", height: "100%", backgroundColor: "#E0E0E0" },
-  deletePhotoBtn: {
+  expandIconOverlay: {
     position: "absolute",
     bottom: 10,
     right: 10,
-    backgroundColor: "rgba(255, 59, 48, 0.9)",
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 8,
+    borderRadius: 20,
   },
-  deletePhotoText: { color: "#FFF", fontWeight: "bold", marginLeft: 5 },
+
   infoCard: {
     backgroundColor: "#FFF",
     borderRadius: moderateScale(12),
@@ -373,6 +563,24 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(15),
     color: "#333",
   },
+
+  // NOVA CAIXA DE RESPOSTA
+  respostaBox: {
+    marginTop: 15,
+    backgroundColor: "#E4EBF7",
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#1F41BB",
+  },
+  respostaTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: "bold",
+    color: "#1F41BB",
+    marginBottom: 5,
+  },
+  respostaText: { fontSize: moderateScale(14), color: "#333", lineHeight: 20 },
+
   adminCard: {
     backgroundColor: "#E8EEF2",
     borderRadius: moderateScale(12),
@@ -387,6 +595,21 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: "center",
   },
+
+  // NOVO BOTÃO DE SETOR
+  sectorButton: {
+    backgroundColor: "#F9F9F9",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  sectorButtonText: { fontSize: moderateScale(15), color: "#333" },
+
   actionButtons: { marginTop: 10 },
   saveBtn: {
     backgroundColor: "#1F41BB",
@@ -437,4 +660,54 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     fontWeight: "bold",
   },
+
+  // ESTILOS DAS MODAIS
+  modalPhotoOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closePhotoBtn: { position: "absolute", top: 50, right: 20, zIndex: 10 },
+  fullScreenImage: { width: "100%", height: "80%" },
+
+  modalSectorOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalSectorContent: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "60%",
+  },
+  modalSectorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalSectorTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: "bold",
+    color: "#333",
+  },
+  sectorListItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+  },
+  sectorListItemActive: {
+    backgroundColor: "#F4F7F8",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: 0,
+  },
+  sectorListText: { fontSize: moderateScale(16), color: "#555" },
+  sectorListTextActive: { color: "#1F41BB", fontWeight: "bold" },
 });
