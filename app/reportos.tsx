@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image, // 🔴 Imagem importada corretamente
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -34,11 +34,11 @@ export default function Reportos() {
   const [reportosSetor, setReportosSetor] = useState<Report[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); // 🔴 ESTADO DO PULL-TO-REFRESH
+  const [isRefreshing, setIsRefreshing] = useState(false); //  ESTADO DO PULL-TO-REFRESH
 
   const user = useAuthStore((state) => state.user);
 
-  // 🔴 SIMULAÇÃO DE FUNCIONÁRIO DA PREFEITURA
+  //  SIMULAÇÃO DE FUNCIONÁRIO DA PREFEITURA
   const isFuncionarioPrefeitura = true;
   const meuSetor = "Infraestrutura";
 
@@ -71,7 +71,7 @@ export default function Reportos() {
     setIsLoading(false);
   }
 
-  // 🔴 FUNÇÃO EXECUTADA AO PUXAR A TELA PARA BAIXO
+  //  FUNÇÃO EXECUTADA AO PUXAR A TELA PARA BAIXO
   async function onRefresh() {
     setIsRefreshing(true);
     await carregarMeusReportos();
@@ -101,7 +101,7 @@ export default function Reportos() {
     return data.toLocaleDateString("pt-BR");
   };
 
-  // 🔴 MÁGICA: Converte o caminho do computador para a URL da internet
+  // Converte o caminho do computador para a URL da internet
   const getMiniaturaUrl = (urlOriginal: string) => {
     if (!urlOriginal) return null;
     return urlOriginal.replace(
@@ -127,7 +127,7 @@ export default function Reportos() {
       <View style={styles.thumbnailContainer}>
         {getMiniaturaUrl(item.urlImagem) ? (
           <Image
-            source={{ uri: getMiniaturaUrl(item.urlImagem) as string }} // 🔴 FIX DO TYPESCRIPT ('as string')
+            source={{ uri: getMiniaturaUrl(item.urlImagem) as string }} //  FIX DO TYPESCRIPT ('as string')
             style={{ width: "100%", height: "100%", borderRadius: 8 }}
           />
         ) : (
@@ -220,8 +220,8 @@ export default function Reportos() {
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshing={isRefreshing} // 🔴 LIGA A ANIMAÇÃO DE REFRESH
-            onRefresh={onRefresh} // 🔴 LIGA A FUNÇÃO DE REFRESH
+            refreshing={isRefreshing} //  LIGA A ANIMAÇÃO DE REFRESH
+            onRefresh={onRefresh} //  LIGA A FUNÇÃO DE REFRESH
             ListEmptyComponent={
               <Text style={styles.emptyText}>
                 {activeTab === "meus"
