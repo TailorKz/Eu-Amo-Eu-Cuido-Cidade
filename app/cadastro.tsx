@@ -1,7 +1,7 @@
 import axios from "axios"; // IMPORTAMOS O AXIOS
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,8 @@ import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
+
+
 export default function Cadastro() {
   const router = useRouter();
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
@@ -29,15 +31,30 @@ export default function Cadastro() {
   const [phoneRaw, setPhoneRaw] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [isLoading, setIsLoading] = useState(false); // Estado de carregamento do botão
-
+const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); 
+const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
   const [errors, setErrors] = useState({
     nome: "",
     phone: "",
     password: "",
   });
+useEffect(() => {
+    buscarConfiguracoes();
+  }, []);
 
+  const buscarConfiguracoes = async () => {
+    try {
+      const response = await axios.get("http://192.168.1.17:8080/api/configuracoes");
+      if (response.data.imagemFundoLogin) {
+        setFundoPersonalizado(response.data.imagemFundoLogin);
+      }
+    } catch (error) {
+      console.log("Erro ao carregar fundo:", error);
+    } finally {
+      setIsConfigLoaded(true); // AVISA QUE O JAVA JÁ RESPONDEU (Dando erro ou não)
+    }
+  };
   function validate() {
     let newErrors = { nome: "", phone: "", password: "" };
 
@@ -68,7 +85,7 @@ export default function Cadastro() {
     setIsLoading(true);
 
     try {
-      const url = "http://192.168.1.17:8080/api/cidadaos/cadastrar"; // USE O SEU IP
+      const url = "http://192.168.1.17:8080/api/cidadaos/cadastrar";
 
       const dadosParaEnviar = {
         nome: nome,
@@ -111,7 +128,7 @@ export default function Cadastro() {
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
             <Image
-              source={require("../assets/images/cidadeipo.jpg")}
+              source={fundoPersonalizado ? { uri: fundoPersonalizado } : require("../assets/images/cidadeipo.jpg")}
               style={styles.footerImage}
               resizeMode="cover"
               onLoadEnd={handleImageLoad}
@@ -234,7 +251,7 @@ export default function Cadastro() {
             </Text>
           </KeyboardAwareScrollView>
 
-          {loadedImages < TOTAL_IMAGES && (
+          {(!isConfigLoaded || loadedImages < TOTAL_IMAGES) && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#1F41BB" />
             </View>
@@ -246,7 +263,6 @@ export default function Cadastro() {
 }
 
 const styles = StyleSheet.create({
-  // MANTIVE EXATAMENTE OS SEUS ESTILOS PARA NÃO ESTRAGAR NADA
   top: {},
   container: { flex: 1, position: "relative", backgroundColor: "#EDEDED" },
   content: { paddingBottom: verticalScale(200), zIndex: 1 },

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,7 @@ export default function Login() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
-
+const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
   const [loadedImages, setLoadedImages] = useState(0);
   const TOTAL_IMAGES = 3;
 
@@ -48,6 +48,24 @@ export default function Login() {
     phone: "",
     password: "",
   });
+useEffect(() => {
+    buscarConfiguracoes();
+  }, []);
+
+  const buscarConfiguracoes = async () => {
+    try {
+      const response = await axios.get("http://192.168.1.17:8080/api/configuracoes");
+      if (response.data.imagemFundoLogin) {
+        setFundoPersonalizado(response.data.imagemFundoLogin);
+      }
+    } catch (error) {
+      console.log("Erro ao carregar fundo:", error);
+    } finally {
+      setIsConfigLoaded(true); //  AVISA QUE O JAVA JÁ RESPONDEU (Dando erro ou não)
+    }
+  };
+
+const [isConfigLoaded, setIsConfigLoaded] = useState(false); //bolinha de carregamento
 
   function validate() {
     let newErrors = { phone: "", password: "" };
@@ -140,7 +158,7 @@ export default function Login() {
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
             <Image
-              source={require("../assets/images/cidadeipo.jpg")}
+              source={fundoPersonalizado ? { uri: fundoPersonalizado } : require("../assets/images/cidadeipo.jpg")}
               style={styles.footerImage}
               resizeMode="cover"
               onLoadEnd={handleImageLoad}
@@ -252,7 +270,7 @@ export default function Login() {
             </Text>
           </KeyboardAwareScrollView>
 
-          {loadedImages < TOTAL_IMAGES && (
+          {(!isConfigLoaded || loadedImages < TOTAL_IMAGES) && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#1F41BB" />
             </View>
