@@ -5,17 +5,17 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
@@ -25,7 +25,8 @@ export default function Solicitacao() {
   const params = useLocalSearchParams();
   const categoria = params.categoria || "Geral";
   const user = useAuthStore((state) => state.user);
-
+// Pegamos a cidade correta da memória do app
+  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
   const scrollRef = useRef<ScrollView>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [locationText, setLocationText] = useState("");
@@ -65,24 +66,32 @@ export default function Solicitacao() {
 
       if (geocode.length > 0) {
         const address = geocode[0];
-        const street =
-          address.street || address.name || "Endereço não encontrado";
-        const streetNumber = address.streetNumber
-          ? `, ${address.streetNumber}`
-          : "";
-        let neighborhood = address.district || address.subregion || "";
-
-        const cidadesBloqueadas = [
-          "São Miguel do Oeste",
-          "Iporã do Oeste",
-          "Descanso",
-          "Santa Catarina",
+        const street = address.street || address.name || "Endereço não encontrado";
+        const streetNumber = address.streetNumber ? `, ${address.streetNumber}` : "";
+        
+        // Pega o que o GPS acha que é o bairro
+        const neighborhood = address.district || address.subregion || "";
+        
+        // filtro inteligente de microrregiões
+        const falsosBairros = [
+          "São Miguel do Oeste", 
+          "Descanso", 
+          "Santa Helena", 
+          "Tunápolis", 
+          "Belmonte", 
+          "Mondaí", 
+          "Itapiranga"
         ];
-        if (cidadesBloqueadas.includes(neighborhood)) neighborhood = "";
+        
+        // Se o bairro for uma cidade vizinha, ignoramos para não sujar o endereço
+        let neighborhoodText = "";
+        if (neighborhood && !falsosBairros.includes(neighborhood)) {
+           neighborhoodText = ` - ${neighborhood}`;
+        }
 
-        const neighborhoodText = neighborhood ? ` - ${neighborhood}` : "";
+        // Monta o texto final cravando a cidade selecionada no final
         setLocationText(
-          `${street}${streetNumber}${neighborhoodText} - Iporã do Oeste, SC`,
+          `${street}${streetNumber}${neighborhoodText} - ${cidadeSelecionada}`
         );
       }
     } catch (error) {
@@ -135,8 +144,8 @@ export default function Solicitacao() {
     setIsSubmitting(true);
     try {
       // ⚠️ LEMBRE-SE DE CONFIRMAR O SEU IP!
-      const url = `http://192.168.1.17:8080/api/solicitacoes/nova/${user.id}`;
-      
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/nova/${user.id}`;
+
       // 🔴 MÁGICA DO UPLOAD: Criamos um "pacote" FormData em vez de um objeto JSON normal
       const formData = new FormData();
       formData.append("categoria", String(categoria));
@@ -161,7 +170,7 @@ export default function Solicitacao() {
           "Content-Type": "multipart/form-data",
         },
       });
-      
+
       Alert.alert(
         "Sucesso!",
         "Sua solicitação foi enviada para a prefeitura.",

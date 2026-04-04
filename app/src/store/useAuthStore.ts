@@ -7,14 +7,17 @@ interface User {
   nome: string;
   telefone: string;
   cidade: string;
+  perfil?: string;
+  setorAtuacao?: string | null; 
+  pushToken?: string;
 }
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  cidadeSelecionada: string | null; // 🔴 NOVO: Guarda a cidade escolhida no Index
+  cidadeSelecionada: string | null; //Guarda a cidade escolhida no Index
   
-  setCidadeSelecionada: (cidade: string) => void; // 🔴 NOVO: Função para salvar a cidade
+  setCidadeSelecionada: (cidade: string) => void; // Função para salvar a cidade
   login: (userData: User) => void;
   logout: () => void;
 }

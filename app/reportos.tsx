@@ -3,13 +3,13 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
@@ -38,14 +38,15 @@ export default function Reportos() {
 
   const user = useAuthStore((state) => state.user);
 
-  //  SIMULAÇÃO DE FUNCIONÁRIO DA PREFEITURA
-  const isFuncionarioPrefeitura = true;
-  const meuSetor = "Infraestrutura";
+ // Verifica o perfil de quem está usando o app
+  const isFuncionarioPrefeitura = user?.perfil === "FUNCIONARIO" || user?.perfil === "GESTOR_SETOR" || user?.perfil === "SUPER_ADMIN";
+  const meuSetor = user?.setorAtuacao;
+  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
 
   async function carregarMeusReportos() {
     if (!user) return;
     try {
-      const url = `http://192.168.1.17:8080/api/solicitacoes/cidadao/${user.id}`;
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidadao/${user.id}`;
       const response = await axios.get(url);
       setMeusReportos(response.data);
     } catch (error) {
@@ -56,7 +57,14 @@ export default function Reportos() {
   async function carregarReportosDoSetor() {
     if (!isFuncionarioPrefeitura) return;
     try {
-      const url = `http://192.168.1.17:8080/api/solicitacoes/setor/${meuSetor}`;
+      // Puxa do setor exato do funcionário
+      let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${meuSetor}?cidade=${cidadeSelecionada}`;
+      
+      // Se for o Prefeito (SUPER_ADMIN), a aba do setor mostra tudo da cidade
+      if (user?.perfil === "SUPER_ADMIN") {
+        url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeSelecionada}`;
+      }
+
       const response = await axios.get(url);
       setReportosSetor(response.data);
     } catch (error) {
@@ -106,7 +114,7 @@ export default function Reportos() {
     if (!urlOriginal) return null;
     return urlOriginal.replace(
       "file:///C:/ipora_imagens/",
-      "http://192.168.1.17:8080/imagens/",
+      "https://tailorkz-production-eu-amo.up.railway.app/imagens/",
     );
   };
 

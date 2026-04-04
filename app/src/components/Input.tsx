@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   TextInput,
   TextInputProps,
   View,
   Text,
+  TouchableOpacity,
 } from "react-native";
 import MaskInput from "react-native-mask-input";
-
 import { moderateScale, scale, verticalScale } from "../utils/responsive";
 
 type Props = Omit<TextInputProps, "onChangeText"> & {
@@ -20,10 +20,12 @@ type Props = Omit<TextInputProps, "onChangeText"> & {
 
 export function Input(props: Props) {
   const { icon, mask, error, onChangeText, ...rest } = props;
+  
+  // Estado para controlar o olhinho da senha
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   return (
     <View style={styles.wrapper}>
-      
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
@@ -31,16 +33,10 @@ export function Input(props: Props) {
         </View>
       )}
 
-      <View
-        style={[
-          styles.container,
-          error && { borderColor: "#ff4d4f" },
-        ]}
-      >
+      <View style={[styles.container, error && { borderColor: "#ff4d4f" }]}>
         {mask ? (
           <MaskInput
             {...rest}
-            mask={mask}
             style={styles.input}
             placeholderTextColor="#999"
             onChangeText={(masked, unmasked) => {
@@ -50,6 +46,8 @@ export function Input(props: Props) {
         ) : (
           <TextInput
             {...rest}
+            //  Desativa a segurança se o olhinho estiver ativo
+            secureTextEntry={rest.secureTextEntry && !isPasswordVisible}
             style={styles.input}
             placeholderTextColor="#999"
             onChangeText={(text) => {
@@ -58,17 +56,23 @@ export function Input(props: Props) {
           />
         )}
 
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={moderateScale(20)}
-            color="#B0B0B0"
-          />
-        )}
+        {/* Se for senha, mostra o olhinho. Se não, mostra o ícone normal */}
+        {rest.secureTextEntry ? (
+          <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+            <Ionicons
+              name={isPasswordVisible ? "eye-outline" : "eye-off-outline"}
+              size={moderateScale(22)}
+              color={isPasswordVisible ? "#1F41BB" : "#B0B0B0"}
+            />
+          </TouchableOpacity>
+        ) : icon ? (
+          <Ionicons name={icon} size={moderateScale(20)} color="#B0B0B0" />
+        ) : null}
       </View>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   wrapper: {

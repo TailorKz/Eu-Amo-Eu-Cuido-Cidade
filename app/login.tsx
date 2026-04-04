@@ -1,19 +1,19 @@
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import MaskInput from "react-native-mask-input";
@@ -26,7 +26,9 @@ export default function Login() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
-const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
+  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(
+    null,
+  );
   const [loadedImages, setLoadedImages] = useState(0);
   const TOTAL_IMAGES = 3;
 
@@ -36,7 +38,7 @@ const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🔴 ESTADOS PARA O FLUXO DE ESQUECI A SENHA
+  // ESTADOS PARA O FLUXO DE ESQUECI A SENHA
   const [isForgotModalVisible, setIsForgotModalVisible] = useState(false);
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
   const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] =
@@ -48,24 +50,33 @@ const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null
     phone: "",
     password: "",
   });
-useEffect(() => {
+  useEffect(() => {
     buscarConfiguracoes();
   }, []);
 
   const buscarConfiguracoes = async () => {
+    //  Se o usuário ainda não escolheu a cidade no Index, não busca nada
+    if (!cidadeSelecionada) {
+       setIsConfigLoaded(true);
+       return;
+    }
+
     try {
-      const response = await axios.get("http://192.168.1.17:8080/api/configuracoes");
+      // Passa a cidade na URL para pegar a foto de fundo certa
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeSelecionada}`,
+      );
       if (response.data.imagemFundoLogin) {
         setFundoPersonalizado(response.data.imagemFundoLogin);
       }
     } catch (error) {
       console.log("Erro ao carregar fundo:", error);
     } finally {
-      setIsConfigLoaded(true); //  AVISA QUE O JAVA JÁ RESPONDEU (Dando erro ou não)
+      setIsConfigLoaded(true);
     }
   };
 
-const [isConfigLoaded, setIsConfigLoaded] = useState(false); //bolinha de carregamento
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false); //bolinha de carregamento
 
   function validate() {
     let newErrors = { phone: "", password: "" };
@@ -93,7 +104,8 @@ const [isConfigLoaded, setIsConfigLoaded] = useState(false); //bolinha de carreg
     setIsLoading(true);
 
     try {
-      const url = "http://192.168.1.17:8080/api/cidadaos/login";
+      const url =
+        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
       const dadosDeLogin = {
         telefone: phoneRaw,
         senha: password,
@@ -158,7 +170,11 @@ const [isConfigLoaded, setIsConfigLoaded] = useState(false); //bolinha de carreg
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
             <Image
-              source={fundoPersonalizado ? { uri: fundoPersonalizado } : require("../assets/images/cidadeipo.jpg")}
+              source={
+                fundoPersonalizado
+                  ? { uri: fundoPersonalizado }
+                  : require("../assets/images/cidadeipo.jpg")
+              }
               style={styles.footerImage}
               resizeMode="cover"
               onLoadEnd={handleImageLoad}

@@ -1,7 +1,7 @@
 import axios from "axios"; // IMPORTAMOS O AXIOS
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,8 +18,6 @@ import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
 
-
-
 export default function Cadastro() {
   const router = useRouter();
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
@@ -31,28 +29,39 @@ export default function Cadastro() {
   const [phoneRaw, setPhoneRaw] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-const [isConfigLoaded, setIsConfigLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); 
-const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(
+    null,
+  );
   const [errors, setErrors] = useState({
     nome: "",
     phone: "",
     password: "",
   });
-useEffect(() => {
+  useEffect(() => {
     buscarConfiguracoes();
   }, []);
 
   const buscarConfiguracoes = async () => {
+    //  Se o usuário ainda não escolheu a cidade no Index, não busca nada
+    if (!cidadeSelecionada) {
+       setIsConfigLoaded(true);
+       return;
+    }
+
     try {
-      const response = await axios.get("http://192.168.1.17:8080/api/configuracoes");
+      //  Passa a cidade na URL para pegar a foto de fundo certa
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeSelecionada}`,
+      );
       if (response.data.imagemFundoLogin) {
         setFundoPersonalizado(response.data.imagemFundoLogin);
       }
     } catch (error) {
       console.log("Erro ao carregar fundo:", error);
     } finally {
-      setIsConfigLoaded(true); // AVISA QUE O JAVA JÁ RESPONDEU (Dando erro ou não)
+      setIsConfigLoaded(true);
     }
   };
   function validate() {
@@ -85,7 +94,8 @@ useEffect(() => {
     setIsLoading(true);
 
     try {
-      const url = "http://192.168.1.17:8080/api/cidadaos/cadastrar";
+      const url =
+        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/cadastrar";
 
       const dadosParaEnviar = {
         nome: nome,
@@ -97,11 +107,11 @@ useEffect(() => {
       const response = await axios.post(url, dadosParaEnviar);
 
       login(response.data);
-      
+
       Alert.alert(
-        "Sucesso!", 
-        "A sua conta foi criada com sucesso.", 
-        [{ text: "OK", onPress: () => router.replace("/home") }] // Vai para a Home!
+        "Sucesso!",
+        "A sua conta foi criada com sucesso.",
+        [{ text: "OK", onPress: () => router.replace("/home") }], // Vai para a Home!
       );
     } catch (error: any) {
       console.log("Erro no cadastro:", error);
@@ -128,7 +138,11 @@ useEffect(() => {
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
             <Image
-              source={fundoPersonalizado ? { uri: fundoPersonalizado } : require("../assets/images/cidadeipo.jpg")}
+              source={
+                fundoPersonalizado
+                  ? { uri: fundoPersonalizado }
+                  : require("../assets/images/cidadeipo.jpg")
+              }
               style={styles.footerImage}
               resizeMode="cover"
               onLoadEnd={handleImageLoad}

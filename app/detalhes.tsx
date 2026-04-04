@@ -2,17 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal, // ✅ MUDANÇA: import nativo
-  Platform, // ✅ MUDANÇA: para detectar iOS/Android
-  ScrollView, // ✅ MUDANÇA: ScrollView simples
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal, // ✅ MUDANÇA: import nativo
+    Platform, // ✅ MUDANÇA: para detectar iOS/Android
+    ScrollView, // ✅ MUDANÇA: ScrollView simples
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 // ✅ MUDANÇA: removido o import do KeyboardAwareScrollView
 import axios from "axios";
@@ -78,7 +78,7 @@ export default function Detalhes() {
     if (!chamado.urlImagem) return null;
     return chamado.urlImagem.replace(
       "file:///C:/ipora_imagens/",
-      "http://192.168.1.17:8080/imagens/",
+      "https://tailorkz-production-eu-amo.up.railway.app/imagens/",
     );
   };
 
@@ -86,7 +86,7 @@ export default function Detalhes() {
 
   const handleSalvarEdicao = async () => {
     try {
-      const url = `http://192.168.1.17:8080/api/solicitacoes/${chamado.id}`;
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`;
       await axios.put(url, {
         localizacao: editLocalizacao,
         observacao: editObservacao,
@@ -109,7 +109,7 @@ export default function Detalhes() {
         style: "destructive",
         onPress: async () => {
           try {
-            const url = `http://192.168.1.17:8080/api/solicitacoes/${chamado.id}`;
+            const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`;
             await axios.delete(url);
             Alert.alert("Excluído", "Solicitação removida.");
             router.replace("/reportos");
@@ -124,7 +124,7 @@ export default function Detalhes() {
 
   const handleAtualizarFuncionario = async () => {
     try {
-      const url = `http://192.168.1.17:8080/api/solicitacoes/${chamado.id}`;
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`;
       //  ENVIA O STATUS, A NOVA CATEGORIA (SE MUDOU) E A RESPOSTA
       await axios.put(url, {
         status: novoStatus.replace(" ", "_"),
