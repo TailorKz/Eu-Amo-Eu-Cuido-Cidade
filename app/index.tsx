@@ -75,17 +75,19 @@ export default function HomeScreen() {
             <View style={styles.buttons}>
               <TouchableOpacity
                 style={styles.primaryButton}
-                onPress={() => handleNavigation("/login")} // 🔴 Usa a nova função
+                onPress={() => handleNavigation("/cadastro")} 
               >
-                <Text style={styles.primaryText}>Entrar</Text>
+                <Text style={styles.primaryText}>Criar conta</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={styles.secondaryButton}
-                onPress={() => handleNavigation("/cadastro")} // 🔴 Usa a nova função
+                onPress={() => handleNavigation("/login")} 
               >
-                <Text style={styles.secondaryText}>Criar conta</Text>
+                <Text style={styles.secondaryText}>Entrar</Text>
               </TouchableOpacity>
+
+              
             </View>
           </View>
         </View>

@@ -1,4 +1,4 @@
-import axios from "axios"; // IMPORTAMOS O AXIOS
+import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";

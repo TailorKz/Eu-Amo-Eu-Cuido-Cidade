@@ -3,20 +3,19 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
 
-// TIPAGEM ESTRITA
 interface Report {
   id: number;
   categoria: string;
@@ -28,20 +27,30 @@ interface Report {
 
 export default function Reportos() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"meus" | "setor">("meus");
+  // 🔴 NOVO: Adicionado "fiscalizacao" aos tipos possíveis de aba
+  const [activeTab, setActiveTab] = useState<"meus" | "setor" | "fiscalizacao">(
+    "meus",
+  );
 
   const [meusReportos, setMeusReportos] = useState<Report[]>([]);
   const [reportosSetor, setReportosSetor] = useState<Report[]>([]);
+  const [reportosVereador, setReportosVereador] = useState<Report[]>([]); // 🔴 NOVO
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); //  ESTADO DO PULL-TO-REFRESH
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const user = useAuthStore((state) => state.user);
 
- // Verifica o perfil de quem está usando o app
-  const isFuncionarioPrefeitura = user?.perfil === "FUNCIONARIO" || user?.perfil === "GESTOR_SETOR" || user?.perfil === "SUPER_ADMIN";
+  const isFuncionarioPrefeitura =
+    user?.perfil === "FUNCIONARIO" ||
+    user?.perfil === "GESTOR_SETOR" ||
+    user?.perfil === "SUPER_ADMIN";
+  // 🔴 NOVO: Identifica se é vereador
+  const isVereador = user?.perfil === "VEREADOR";
+
   const meuSetor = user?.setorAtuacao;
-  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
+  const cidadeSelecionada =
+    useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
 
   async function carregarMeusReportos() {
     if (!user) return;
@@ -57,14 +66,10 @@ export default function Reportos() {
   async function carregarReportosDoSetor() {
     if (!isFuncionarioPrefeitura) return;
     try {
-      // Puxa do setor exato do funcionário
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${meuSetor}?cidade=${cidadeSelecionada}`;
-      
-      // Se for o Prefeito (SUPER_ADMIN), a aba do setor mostra tudo da cidade
       if (user?.perfil === "SUPER_ADMIN") {
         url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeSelecionada}`;
       }
-
       const response = await axios.get(url);
       setReportosSetor(response.data);
     } catch (error) {
@@ -72,18 +77,31 @@ export default function Reportos() {
     }
   }
 
+  // 🔴 NOVO: Função exclusiva que busca a lista do Vereador
+  async function carregarReportosVereador() {
+    if (!isVereador) return;
+    try {
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/vereador?cidade=${cidadeSelecionada}`;
+      const response = await axios.get(url);
+      setReportosVereador(response.data);
+    } catch (error) {
+      console.log("Erro ao buscar reportos de fiscalização:", error);
+    }
+  }
+
   async function carregarTudo() {
     setIsLoading(true);
     await carregarMeusReportos();
     await carregarReportosDoSetor();
+    await carregarReportosVereador(); // 🔴 NOVO
     setIsLoading(false);
   }
 
-  //  FUNÇÃO EXECUTADA AO PUXAR A TELA PARA BAIXO
   async function onRefresh() {
     setIsRefreshing(true);
     await carregarMeusReportos();
     await carregarReportosDoSetor();
+    await carregarReportosVereador(); // 🔴 NOVO
     setIsRefreshing(false);
   }
 
@@ -109,7 +127,6 @@ export default function Reportos() {
     return data.toLocaleDateString("pt-BR");
   };
 
-  // Converte o caminho do computador para a URL da internet
   const getMiniaturaUrl = (urlOriginal: string) => {
     if (!urlOriginal) return null;
     return urlOriginal.replace(
@@ -127,7 +144,7 @@ export default function Reportos() {
           pathname: "/detalhes",
           params: {
             dados: JSON.stringify(item),
-            origem: activeTab,
+            origem: activeTab, // Vai enviar "fiscalizacao" se o vereador clicar nesta aba
           },
         });
       }}
@@ -135,11 +152,19 @@ export default function Reportos() {
       <View style={styles.thumbnailContainer}>
         {getMiniaturaUrl(item.urlImagem) ? (
           <Image
-            source={{ uri: getMiniaturaUrl(item.urlImagem) as string }} //  FIX DO TYPESCRIPT ('as string')
-            style={{ width: "100%", height: "100%", borderRadius: 8 }}
+            source={{ uri: getMiniaturaUrl(item.urlImagem) as string }}
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: moderateScale(8),
+            }}
           />
         ) : (
-          <Ionicons name="image-outline" size={30} color="#999" />
+          <Ionicons
+            name="image-outline"
+            size={moderateScale(30)}
+            color="#999"
+          />
         )}
       </View>
 
@@ -178,7 +203,8 @@ export default function Reportos() {
       <View style={styles.container}>
         <Text style={styles.pageTitle}>Solicitações</Text>
 
-        {isFuncionarioPrefeitura && (
+        {/* 🔴 MODIFICADO: Renderiza as abas dependendo se é Funcionário ou Vereador */}
+        {(isFuncionarioPrefeitura || isVereador) && (
           <View style={styles.tabContainer}>
             <TouchableOpacity
               style={[
@@ -196,22 +222,44 @@ export default function Reportos() {
                 Meus Reportos
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === "setor" && styles.tabButtonActive,
-              ]}
-              onPress={() => setActiveTab("setor")}
-            >
-              <Text
+
+            {isFuncionarioPrefeitura && (
+              <TouchableOpacity
                 style={[
-                  styles.tabText,
-                  activeTab === "setor" && styles.tabTextActive,
+                  styles.tabButton,
+                  activeTab === "setor" && styles.tabButtonActive,
                 ]}
+                onPress={() => setActiveTab("setor")}
               >
-                Do Meu Setor
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "setor" && styles.tabTextActive,
+                  ]}
+                >
+                  Do Meu Setor
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {isVereador && (
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === "fiscalizacao" && styles.tabButtonActive,
+                ]}
+                onPress={() => setActiveTab("fiscalizacao")}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "fiscalizacao" && styles.tabTextActive,
+                  ]}
+                >
+                  Fiscalização
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -223,18 +271,27 @@ export default function Reportos() {
           />
         ) : (
           <FlatList
-            data={activeTab === "meus" ? meusReportos : reportosSetor}
+            // 🔴 Lógica para renderizar a lista certa
+            data={
+              activeTab === "meus"
+                ? meusReportos
+                : activeTab === "setor"
+                  ? reportosSetor
+                  : reportosVereador
+            }
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshing={isRefreshing} //  LIGA A ANIMAÇÃO DE REFRESH
-            onRefresh={onRefresh} //  LIGA A FUNÇÃO DE REFRESH
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
                 {activeTab === "meus"
                   ? "Você ainda não fez nenhuma solicitação."
-                  : "Nenhuma solicitação recebida no seu setor."}
+                  : activeTab === "setor"
+                    ? "Nenhuma solicitação pendente no seu setor."
+                    : "Nenhuma solicitação em andamento para fiscalizar."}
               </Text>
             }
           />

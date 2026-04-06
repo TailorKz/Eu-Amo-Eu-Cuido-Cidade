@@ -353,7 +353,7 @@ export default function Solicitacao() {
               onFocus={() => {
                 setTimeout(() => {
                   scrollRef.current?.scrollTo({
-                    y: observacaoY.current - 20,
+                    y: observacaoY.current - 80,
                     animated: true,
                   });
                 }, 150);
