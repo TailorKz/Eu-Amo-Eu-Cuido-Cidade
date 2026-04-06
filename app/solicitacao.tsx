@@ -5,18 +5,21 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+// 🔴 NOVO: Importação do Mapa
+import MapView, { Marker } from "react-native-maps";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
 
@@ -25,8 +28,11 @@ export default function Solicitacao() {
   const params = useLocalSearchParams();
   const categoria = params.categoria || "Geral";
   const user = useAuthStore((state) => state.user);
-// Pegamos a cidade correta da memória do app
-  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
+
+  // 🔴 Pega a cidade correta
+  const cidadeSelecionada =
+    useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
+
   const scrollRef = useRef<ScrollView>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [locationText, setLocationText] = useState("");
@@ -34,7 +40,13 @@ export default function Solicitacao() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ Posição real de cada campo, funciona em qualquer dispositivo
+  // 🔴 NOVOS ESTADOS PARA O MAPA INTERATIVO
+  const [isMapModalVisible, setIsMapModalVisible] = useState(false);
+  const [selectedCoordinate, setSelectedCoordinate] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
   const localizacaoY = useRef(0);
   const observacaoY = useRef(0);
 
@@ -49,7 +61,7 @@ export default function Solicitacao() {
       if (status !== "granted") {
         Alert.alert(
           "Permissão negada",
-          "Precisamos da localização para registrar o problema.",
+          "Precisamos da localização para registar o problema.",
         );
         setIsLoadingLocation(false);
         return;
@@ -59,40 +71,19 @@ export default function Solicitacao() {
         accuracy: Location.Accuracy.High,
       });
 
+      // 🔴 Salva a coordenada exata para quando o utilizador abrir o Mapa
+      setSelectedCoordinate({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
       const geocode = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
 
       if (geocode.length > 0) {
-        const address = geocode[0];
-        const street = address.street || address.name || "Endereço não encontrado";
-        const streetNumber = address.streetNumber ? `, ${address.streetNumber}` : "";
-        
-        // Pega o que o GPS acha que é o bairro
-        const neighborhood = address.district || address.subregion || "";
-        
-        // filtro inteligente de microrregiões
-        const falsosBairros = [
-          "São Miguel do Oeste", 
-          "Descanso", 
-          "Santa Helena", 
-          "Tunápolis", 
-          "Belmonte", 
-          "Mondaí", 
-          "Itapiranga"
-        ];
-        
-        // Se o bairro for uma cidade vizinha, ignoramos para não sujar o endereço
-        let neighborhoodText = "";
-        if (neighborhood && !falsosBairros.includes(neighborhood)) {
-           neighborhoodText = ` - ${neighborhood}`;
-        }
-
-        // Monta o texto final cravando a cidade selecionada no final
-        setLocationText(
-          `${street}${streetNumber}${neighborhoodText} - ${cidadeSelecionada}`
-        );
+        processarGeocode(geocode[0]);
       }
     } catch (error) {
       console.log("Erro ao buscar localização:", error);
@@ -102,12 +93,62 @@ export default function Solicitacao() {
     }
   }
 
+  // 🔴 NOVA FUNÇÃO: Transforma as coordenadas em texto limpo com o filtro de Falsos Bairros
+  const processarGeocode = (address: Location.LocationGeocodedAddress) => {
+    const street = address.street || address.name || "Endereço não encontrado";
+    const streetNumber = address.streetNumber
+      ? `, ${address.streetNumber}`
+      : "";
+    const neighborhood = address.district || address.subregion || "";
+
+    // Filtro de Falsos Bairros
+    const falsosBairros = [
+      "São Miguel do Oeste",
+      "Descanso",
+      "Santa Helena",
+      "Tunápolis",
+      "Belmonte",
+      "Mondaí",
+      "Itapiranga",
+    ];
+    let neighborhoodText = "";
+    if (neighborhood && !falsosBairros.includes(neighborhood)) {
+      neighborhoodText = ` - ${neighborhood}`;
+    }
+
+    setLocationText(
+      `${street}${streetNumber}${neighborhoodText} - ${cidadeSelecionada}`,
+    );
+  };
+
+  // 🔴 NOVA FUNÇÃO: Quando o utilizador clica em "Confirmar" no mapa interativo
+  const handleConfirmMapLocation = async () => {
+    if (!selectedCoordinate) return;
+    setIsMapModalVisible(false);
+    setIsLoadingLocation(true);
+
+    try {
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: selectedCoordinate.latitude,
+        longitude: selectedCoordinate.longitude,
+      });
+
+      if (geocode.length > 0) {
+        processarGeocode(geocode[0]);
+      }
+    } catch (error) {
+      console.log("Erro ao reverter geocodificação do mapa:", error);
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
   async function handleOpenCamera() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
         "Permissão necessária",
-        "Precisamos acessar sua câmera para tirar a foto do problema.",
+        "Precisamos aceder à câmara para tirar a foto do problema.",
       );
       return;
     }
@@ -134,53 +175,42 @@ export default function Solicitacao() {
       return;
     }
     if (!user) {
-      Alert.alert(
-        "Erro",
-        "Você precisa estar logado para enviar uma solicitação.",
-      );
+      Alert.alert("Erro", "Precisa estar logado para enviar uma solicitação.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // ⚠️ LEMBRE-SE DE CONFIRMAR O SEU IP!
       const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/nova/${user.id}`;
-
-      // 🔴 MÁGICA DO UPLOAD: Criamos um "pacote" FormData em vez de um objeto JSON normal
       const formData = new FormData();
       formData.append("categoria", String(categoria));
       formData.append("localizacao", locationText);
       formData.append("observacao", observation);
 
-      // Pega o nome do arquivo da câmera e o formato (ex: .jpg)
       const filename = imageUri.split("/").pop();
       const match = /\.(\w+)$/.exec(filename || "");
       const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-      // Adiciona o arquivo binário da imagem ao pacote
       formData.append("imagem", {
         uri: imageUri,
         name: filename,
         type: type,
       } as any);
 
-      // Envia via Axios informando que o conteúdo é 'multipart/form-data'
       await axios.post(url, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       Alert.alert(
         "Sucesso!",
-        "Sua solicitação foi enviada para a prefeitura.",
+        "A sua solicitação foi enviada para a prefeitura.",
         [{ text: "OK", onPress: () => router.replace("/home") }],
       );
     } catch (error) {
       console.log("Erro ao enviar solicitação:", error);
       Alert.alert(
         "Erro",
-        "Não foi possível enviar a solicitação. Tente novamente mais tarde.",
+        "Não foi possível enviar a solicitação. Tente novamente.",
       );
     } finally {
       setIsSubmitting(false);
@@ -204,7 +234,6 @@ export default function Solicitacao() {
         <View style={{ width: moderateScale(24) }} />
       </View>
 
-      {/* ✅ Mesma estrutura do detalhes.tsx que já funciona */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -217,7 +246,7 @@ export default function Solicitacao() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.title}>
-            Faça sua solicitação para o setor responsável por:{"\n"}
+            Faça a sua solicitação para o setor responsável por:{"\n"}
             <Text style={styles.categoryHighlight}>{categoria}</Text>
           </Text>
 
@@ -245,14 +274,13 @@ export default function Solicitacao() {
                   size={moderateScale(50)}
                   color="#1F41BB"
                 />
-                <Text style={styles.cameraText}>Tocar para abrir a câmera</Text>
+                <Text style={styles.cameraText}>Tocar para abrir a câmara</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <Text style={styles.inputLabel}>Localização</Text>
 
-          {/* ✅ onLayout captura a posição real do campo em qualquer dispositivo */}
           <View
             style={styles.inputWrapper}
             onLayout={(e) => {
@@ -276,7 +304,7 @@ export default function Solicitacao() {
                 style={styles.input}
                 value={locationText}
                 onChangeText={setLocationText}
-                placeholder="Aguardando GPS..."
+                placeholder="A aguardar GPS..."
                 placeholderTextColor="#999"
                 onFocus={() => {
                   setTimeout(() => {
@@ -290,13 +318,24 @@ export default function Solicitacao() {
             )}
           </View>
 
+          {/* 🔴 NOVO BOTÃO: Abrir o Mapa Interativo */}
+          <TouchableOpacity
+            style={styles.openMapBtn}
+            onPress={() => setIsMapModalVisible(true)}
+          >
+            <Ionicons name="map" size={16} color="#1F41BB" />
+            <Text style={styles.openMapBtnText}>
+              Ajustar localização no mapa
+            </Text>
+          </TouchableOpacity>
+
           <Text style={styles.hintText}>
-            * Você pode editar o endereço se o GPS não for exato.
+            * Pode digitar o endereço manualmente ou usar o mapa acima se o GPS
+            falhar.
           </Text>
 
           <Text style={styles.inputLabel}>Observações (Opcional)</Text>
 
-          {/* ✅ onLayout captura a posição real do campo de observação */}
           <View
             style={[styles.inputWrapper, styles.textAreaWrapper]}
             onLayout={(e) => {
@@ -307,7 +346,7 @@ export default function Solicitacao() {
               style={[styles.input, styles.textArea]}
               value={observation}
               onChangeText={setObservation}
-              placeholder="Descreva detalhes do problema, complemento ou ponto de referência."
+              placeholder="Descreva detalhes do problema ou ponto de referência."
               placeholderTextColor="#999"
               multiline
               textAlignVertical="top"
@@ -335,6 +374,73 @@ export default function Solicitacao() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ========================================== */}
+      {/* 🔴 MODAL INTERATIVA DO MAPA              */}
+      {/* ========================================== */}
+      <Modal
+        visible={isMapModalVisible}
+        animationType="slide"
+        transparent={false}
+      >
+        <View style={styles.mapModalContainer}>
+          <View style={styles.mapModalHeader}>
+            <Text style={styles.mapModalTitle}>Ajuste o Alfinete</Text>
+            <TouchableOpacity
+              onPress={() => setIsMapModalVisible(false)}
+              style={{ padding: 5 }}
+            >
+              <Ionicons name="close" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.mapInstructions}>
+            <Text style={styles.mapInstructionsText}>
+              Toque ou arraste no mapa para apontar o local exato do problema.
+            </Text>
+          </View>
+
+          {selectedCoordinate ? (
+            <MapView
+              style={styles.mapArea}
+              initialRegion={{
+                latitude: selectedCoordinate.latitude,
+                longitude: selectedCoordinate.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              }}
+              // Atualiza o pino quando o utilizador toca no mapa
+              onPress={(e) => setSelectedCoordinate(e.nativeEvent.coordinate)}
+            >
+              <Marker
+                coordinate={selectedCoordinate}
+                draggable // Permite arrastar o pino
+                onDragEnd={(e) =>
+                  setSelectedCoordinate(e.nativeEvent.coordinate)
+                }
+              />
+            </MapView>
+          ) : (
+            <View
+              style={[
+                styles.mapArea,
+                { justifyContent: "center", alignItems: "center" },
+              ]}
+            >
+              <ActivityIndicator size="large" color="#1F41BB" />
+            </View>
+          )}
+
+          <View style={styles.mapModalFooter}>
+            <TouchableOpacity
+              style={styles.confirmMapBtn}
+              onPress={handleConfirmMapLocation}
+            >
+              <Text style={styles.confirmMapBtnText}>Confirmar este Local</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -379,6 +485,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1F41BB",
   },
+
   photoContainer: {
     width: "100%",
     height: verticalScale(200),
@@ -417,6 +524,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     fontWeight: "600",
   },
+
   inputLabel: {
     fontSize: moderateScale(15),
     fontWeight: "600",
@@ -436,10 +544,30 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: scale(8) },
   input: { flex: 1, fontSize: moderateScale(15), color: "#333" },
+
+  // 🔴 ESTILOS NOVOS DO MAPA E BOTOES
+  openMapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#E8F0FE",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 8,
+    marginLeft: 5,
+  },
+  openMapBtnText: {
+    color: "#1F41BB",
+    fontWeight: "bold",
+    fontSize: moderateScale(13),
+    marginLeft: 6,
+  },
+
   hintText: {
     fontSize: moderateScale(12),
     color: "#888",
-    marginTop: verticalScale(4),
+    marginTop: verticalScale(10),
     marginLeft: scale(5),
     marginBottom: verticalScale(20),
   },
@@ -466,5 +594,49 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: moderateScale(18),
     fontWeight: "700",
+  },
+
+  // 🔴 ESTILOS DA MODAL DO MAPA
+  mapModalContainer: { flex: 1, backgroundColor: "#FFF" },
+  mapModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: verticalScale(50),
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+  },
+  mapModalTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: "bold",
+    color: "#333",
+  },
+  mapInstructions: { backgroundColor: "#F4F7F8", padding: 15 },
+  mapInstructionsText: {
+    color: "#555",
+    textAlign: "center",
+    fontSize: moderateScale(14),
+  },
+  mapArea: { flex: 1, width: "100%" },
+  mapModalFooter: {
+    padding: 20,
+    backgroundColor: "#FFF",
+    borderTopWidth: 1,
+    borderTopColor: "#EEE",
+    paddingBottom: verticalScale(30),
+  },
+  confirmMapBtn: {
+    backgroundColor: "#1F41BB",
+    padding: 15,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  confirmMapBtnText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: moderateScale(16),
   },
 });

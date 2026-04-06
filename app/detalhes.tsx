@@ -1,25 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import * as ImagePicker from "expo-image-picker"; // 🔴 NOVO: Importamos a câmera
+import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal, // ✅ MUDANÇA: import nativo
-    Platform, // ✅ MUDANÇA: para detectar iOS/Android
-    ScrollView, // ✅ MUDANÇA: ScrollView simples
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-// ✅ MUDANÇA: removido o import do KeyboardAwareScrollView
-import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Select } from "./src/components/Select";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+
 export default function Detalhes() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -41,11 +44,21 @@ export default function Detalhes() {
   );
   const [novoStatus, setNovoStatus] = useState(chamado?.status || "");
 
-  // 🔴 ESTADOS PARA AS MODAIS E RESPOSTAS
+  // ESTADOS PARA AS MODAIS E RESPOSTAS
   const [respostaPrefeitura, setRespostaPrefeitura] = useState(
     chamado?.resposta || "",
   );
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+
+  // 🔴 NOVO: Estado para saber qual imagem abrir em tela cheia (A do problema ou a da resolução)
+  const [imagemModalAtual, setImagemModalAtual] = useState<string | null>(null);
+
+  // 🔴 NOVO: Estado para guardar a foto tirada pelo funcionário
+  const [imagemResolvidaUri, setImagemResolvidaUri] = useState<string | null>(
+    null,
+  );
+  const [isUploading, setIsUploading] = useState(false);
+
   const [isSetorModalVisible, setIsSetorModalVisible] = useState(false);
   const [setorSelecionado, setSetorSelecionado] = useState(
     chamado?.categoria || "",
@@ -60,20 +73,19 @@ export default function Detalhes() {
     "Saúde Pública e Vigilância",
   ];
 
-  const observacaoRef = useRef<View>(null);
-  const respostaRef = useRef<View>(null);
   const observacaoY = useRef(0);
   const respostaY = useRef(0);
 
   if (!chamado) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Text style={{ textAlign: "center", marginTop: 50 }}>
+        <Text style={{ textAlign: "center", marginTop: verticalScale(50) }}>
           Chamado não encontrado.
         </Text>
       </SafeAreaView>
     );
   }
+
   const getImagemUrl = () => {
     if (!chamado.urlImagem) return null;
     return chamado.urlImagem.replace(
@@ -82,7 +94,7 @@ export default function Detalhes() {
     );
   };
 
-  // --- FUNÇÕES DE AÇÃO (Conectadas ao Java) ---
+  // --- FUNÇÕES DE AÇÃO ---
 
   const handleSalvarEdicao = async () => {
     try {
@@ -122,31 +134,87 @@ export default function Detalhes() {
     ]);
   };
 
+  // 🔴 NOVO: Função para o funcionário tirar a foto da resolução
+  async function handleOpenCameraResolvido() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permissão necessária",
+        "Precisamos aceder à câmara para tirar a foto.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setImagemResolvidaUri(result.assets[0].uri);
+    }
+  }
+
+  // 🔴 ATUALIZADO: Agora envia Multipart/Form-Data para suportar a foto
   const handleAtualizarFuncionario = async () => {
+    setIsUploading(true);
     try {
-      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`;
-      //  ENVIA O STATUS, A NOVA CATEGORIA (SE MUDOU) E A RESPOSTA
-      await axios.put(url, {
-        status: novoStatus.replace(" ", "_"),
-        categoria: setorSelecionado,
-        resposta: respostaPrefeitura,
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}/atualizar-com-foto`;
+
+      const formData = new FormData();
+      formData.append("status", novoStatus.replace(" ", "_"));
+      formData.append("categoria", setorSelecionado);
+      formData.append("resposta", respostaPrefeitura);
+
+      // Se o funcionário tirou uma foto, anexa ao envio!
+      if (imagemResolvidaUri) {
+        const filename = imagemResolvidaUri.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename || "");
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+        formData.append("imagemResolvida", {
+          uri: imagemResolvidaUri,
+          name: filename,
+          type: type,
+        } as any);
+      }
+
+      await axios.put(url, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
+
       Alert.alert("Atualizado!", "Dados alterados com sucesso.");
       router.replace("/reportos");
     } catch (error) {
       console.log(error);
       Alert.alert("Erro", "Não foi possível atualizar os dados.");
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const abrirNoMapa = () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(chamado.localizacao)}`;
+    Linking.openURL(url);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 5 }}>
-          <Ionicons name="arrow-back" size={24} color="#1F41BB" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ padding: moderateScale(5) }}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={moderateScale(24)}
+            color="#1F41BB"
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Detalhes da Solicitação</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: scale(24) }} />
       </View>
 
       <KeyboardAvoidingView
@@ -161,11 +229,14 @@ export default function Detalhes() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* 1. ÁREA DA IMAGEM (AGORA É CLICÁVEL) */}
+          {/* 1. ÁREA DA IMAGEM DO PROBLEMA */}
           <TouchableOpacity
             style={styles.imageContainer}
             activeOpacity={0.8}
-            onPress={() => setIsImageModalVisible(true)} // 🔴 ABRE A FOTO GIGANTE
+            onPress={() => {
+              setImagemModalAtual(getImagemUrl());
+              setIsImageModalVisible(true);
+            }}
           >
             {getImagemUrl() ? (
               <Image
@@ -181,7 +252,7 @@ export default function Detalhes() {
             )}
             {!isEditing && (
               <View style={styles.expandIconOverlay}>
-                <Ionicons name="expand" size={20} color="#FFF" />
+                <Ionicons name="expand" size={moderateScale(20)} color="#FFF" />
               </View>
             )}
           </TouchableOpacity>
@@ -205,16 +276,55 @@ export default function Detalhes() {
               </View>
             </View>
 
-            {isModoGestao && (
-              <Text style={styles.enviadoPor}>
-                Enviado por:{" "}
-                <Text style={{ fontWeight: "bold" }}>João Cidadão</Text>
-              </Text>
+            {/* DADOS REAIS DO CIDADÃO (VISÃO GESTOR) */}
+            {isModoGestao && chamado.cidadao && (
+              <View
+                style={{
+                  backgroundColor: "#F0F4F8",
+                  padding: moderateScale(12),
+                  borderRadius: moderateScale(8),
+                  marginTop: verticalScale(10),
+                }}
+              >
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    color: "#1F41BB",
+                    fontSize: moderateScale(13),
+                    marginBottom: verticalScale(5),
+                  }}
+                >
+                  👤 Solicitante:
+                </Text>
+                <Text
+                  style={{
+                    color: "#333",
+                    fontSize: moderateScale(14),
+                    fontWeight: "bold",
+                    marginBottom: verticalScale(2),
+                  }}
+                >
+                  {chamado.cidadao.nome}
+                </Text>
+                <Text style={{ color: "#555", fontSize: moderateScale(13) }}>
+                  {chamado.cidadao.telefone}
+                </Text>
+              </View>
             )}
 
             <View style={styles.divider} />
+            <Text
+              style={[
+                styles.label,
+                {
+                  marginTop: verticalScale(15),
+                  marginBottom: verticalScale(10),
+                },
+              ]}
+            >
+              Localização
+            </Text>
 
-            <Text style={[styles.label, { marginTop: 15 }]}>Localização</Text>
             {isEditing ? (
               <TextInput
                 style={styles.input}
@@ -223,12 +333,39 @@ export default function Detalhes() {
               />
             ) : (
               <View style={styles.row}>
-                <Ionicons name="location" size={18} color="#1F41BB" />
+                <Ionicons
+                  name="location"
+                  size={moderateScale(18)}
+                  color="#1F41BB"
+                />
                 <Text style={styles.valueText}>{chamado.localizacao}</Text>
               </View>
             )}
 
-            <Text style={[styles.label, { marginTop: 15 }]}>
+            {/* BOTÃO DO MAPA */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#E8F0FE",
+                padding: moderateScale(12),
+                borderRadius: moderateScale(8),
+                alignItems: "center",
+                marginTop: verticalScale(20),
+                marginBottom: verticalScale(15),
+              }}
+              onPress={abrirNoMapa}
+            >
+              <Text
+                style={{
+                  color: "#1F41BB",
+                  fontWeight: "bold",
+                  fontSize: moderateScale(14),
+                }}
+              >
+                📍 Ver Rota no Mapa
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.label, { marginTop: verticalScale(15) }]}>
               Observação do Cidadão
             </Text>
             <View
@@ -244,7 +381,7 @@ export default function Detalhes() {
                 <TextInput
                   style={[
                     styles.input,
-                    { height: 80, textAlignVertical: "top" },
+                    { height: verticalScale(80), textAlignVertical: "top" },
                   ]}
                   multiline
                   value={editObservacao}
@@ -265,13 +402,47 @@ export default function Detalhes() {
               )}
             </View>
 
-            {/* 🔴 RESPOSTA OFICIAL PARA O CIDADÃO LER */}
+            {/* 🔴 RESPOSTA OFICIAL E IMAGEM DE RESOLUÇÃO (VISÃO DO CIDADÃO) */}
             {!isModoGestao && chamado.resposta && (
               <View style={styles.respostaBox}>
                 <Text style={styles.respostaTitle}>
-                  <Ionicons name="business" size={16} /> Resposta da Prefeitura:
+                  <Ionicons name="business" size={moderateScale(16)} /> Resposta
+                  da Prefeitura:
                 </Text>
                 <Text style={styles.respostaText}>{chamado.resposta}</Text>
+
+                {chamado.urlImagemResolvida && (
+                  <View style={{ marginTop: verticalScale(15) }}>
+                    <Text
+                      style={{
+                        fontSize: moderateScale(13),
+                        fontWeight: "bold",
+                        color: "#1F41BB",
+                        marginBottom: verticalScale(8),
+                      }}
+                    >
+                      <Ionicons name="camera" size={moderateScale(14)} /> Foto
+                      da Resolução:
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setImagemModalAtual(chamado.urlImagemResolvida);
+                        setIsImageModalVisible(true);
+                      }}
+                    >
+                      <Image
+                        source={{ uri: chamado.urlImagemResolvida }}
+                        style={{
+                          width: "100%",
+                          height: verticalScale(140),
+                          borderRadius: moderateScale(8),
+                        }}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -282,7 +453,7 @@ export default function Detalhes() {
               <Text style={styles.adminTitle}>Painel da Prefeitura</Text>
 
               <Text style={styles.label}>Atualizar Status:</Text>
-              <View style={{ zIndex: 10, marginBottom: 15 }}>
+              <View style={{ zIndex: 10, marginBottom: verticalScale(15) }}>
                 <Select
                   placeholder="Selecione o Status"
                   options={["PENDENTE", "EM ANDAMENTO", "RESOLVIDO"]}
@@ -291,13 +462,16 @@ export default function Detalhes() {
               </View>
 
               <Text style={styles.label}>Transferir de Setor:</Text>
-              {/* 🔴 BOTÃO QUE ABRE A NOVA MODAL DE SETORES */}
               <TouchableOpacity
                 style={styles.sectorButton}
                 onPress={() => setIsSetorModalVisible(true)}
               >
                 <Text style={styles.sectorButtonText}>{setorSelecionado}</Text>
-                <Ionicons name="chevron-down" size={20} color="#666" />
+                <Ionicons
+                  name="chevron-down"
+                  size={moderateScale(20)}
+                  color="#666"
+                />
               </TouchableOpacity>
 
               <Text style={styles.label}>Resposta Oficial ao Cidadão:</Text>
@@ -309,7 +483,7 @@ export default function Detalhes() {
                 <TextInput
                   style={[
                     styles.input,
-                    { height: 80, textAlignVertical: "top" },
+                    { height: verticalScale(80), textAlignVertical: "top" },
                   ]}
                   multiline
                   placeholder="Ex: A equipe já foi enviada ao local..."
@@ -326,11 +500,56 @@ export default function Detalhes() {
                 />
               </View>
 
+              {/* 🔴 NOVO: BOTÃO PARA ANEXAR A FOTO DA RESOLUÇÃO */}
+              <Text style={[styles.label, { marginTop: verticalScale(10) }]}>
+                Foto da Resolução (Opcional):
+              </Text>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={handleOpenCameraResolvido}
+              >
+                {imagemResolvidaUri || chamado?.urlImagemResolvida ? (
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={moderateScale(20)}
+                      color="#4CAF50"
+                    />
+                    <Text
+                      style={[
+                        styles.photoButtonText,
+                        { color: "#4CAF50", marginLeft: scale(8) },
+                      ]}
+                    >
+                      Foto anexada! (Toque para trocar)
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons
+                      name="camera"
+                      size={moderateScale(20)}
+                      color="#666"
+                    />
+                    <Text
+                      style={[styles.photoButtonText, { marginLeft: scale(8) }]}
+                    >
+                      Tirar foto do problema resolvido
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.saveBtn}
                 onPress={handleAtualizarFuncionario}
+                disabled={isUploading}
               >
-                <Text style={styles.saveBtnText}>Salvar Atualização</Text>
+                {isUploading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Salvar Atualização</Text>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -361,9 +580,9 @@ export default function Detalhes() {
                   >
                     <Ionicons
                       name="pencil"
-                      size={18}
+                      size={moderateScale(18)}
                       color="#FFF"
-                      style={{ marginRight: 8 }}
+                      style={{ marginRight: scale(8) }}
                     />
                     <Text style={styles.saveBtnText}>Editar Solicitação</Text>
                   </TouchableOpacity>
@@ -373,9 +592,9 @@ export default function Detalhes() {
                   >
                     <Ionicons
                       name="trash"
-                      size={18}
+                      size={moderateScale(18)}
                       color="#FF3B30"
-                      style={{ marginRight: 8 }}
+                      style={{ marginRight: scale(8) }}
                     />
                     <Text style={styles.deleteBtnText}>Excluir</Text>
                   </TouchableOpacity>
@@ -387,7 +606,7 @@ export default function Detalhes() {
       </KeyboardAvoidingView>
 
       {/* ========================================== */}
-      {/* 🔴 MODAL 1: FOTO EM TELA CHEIA             */}
+      {/* MODAL 1: FOTO EM TELA CHEIA                */}
       {/* ========================================== */}
       <Modal
         visible={isImageModalVisible}
@@ -399,11 +618,15 @@ export default function Detalhes() {
             style={styles.closePhotoBtn}
             onPress={() => setIsImageModalVisible(false)}
           >
-            <Ionicons name="close-circle" size={36} color="#FFF" />
+            <Ionicons
+              name="close-circle"
+              size={moderateScale(36)}
+              color="#FFF"
+            />
           </TouchableOpacity>
-          {getImagemUrl() ? (
+          {imagemModalAtual ? (
             <Image
-              source={{ uri: getImagemUrl() as string }}
+              source={{ uri: imagemModalAtual }}
               style={styles.fullScreenImage}
               resizeMode="contain"
             />
@@ -418,7 +641,7 @@ export default function Detalhes() {
       </Modal>
 
       {/* ========================================== */}
-      {/* 🔴 MODAL 2: TRANSFERIR SETOR               */}
+      {/* MODAL 2: TRANSFERIR SETOR                  */}
       {/* ========================================== */}
       <Modal
         visible={isSetorModalVisible}
@@ -430,7 +653,7 @@ export default function Detalhes() {
             <View style={styles.modalSectorHeader}>
               <Text style={styles.modalSectorTitle}>Escolha o novo Setor</Text>
               <TouchableOpacity onPress={() => setIsSetorModalVisible(false)}>
-                <Ionicons name="close" size={28} color="#333" />
+                <Ionicons name="close" size={moderateScale(28)} color="#333" />
               </TouchableOpacity>
             </View>
 
@@ -460,7 +683,7 @@ export default function Detalhes() {
                   {setorSelecionado === setorItem && (
                     <Ionicons
                       name="checkmark-circle"
-                      size={22}
+                      size={moderateScale(22)}
                       color="#1F41BB"
                     />
                   )}
@@ -502,11 +725,11 @@ const styles = StyleSheet.create({
   image: { width: "100%", height: "100%", backgroundColor: "#E0E0E0" },
   expandIconOverlay: {
     position: "absolute",
-    bottom: 10,
-    right: 10,
+    bottom: verticalScale(10),
+    right: scale(10),
     backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 8,
-    borderRadius: 20,
+    padding: moderateScale(8),
+    borderRadius: moderateScale(20),
   },
 
   infoCard: {
@@ -520,16 +743,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: verticalScale(5),
   },
   categoria: {
     fontSize: moderateScale(20),
     fontWeight: "bold",
     color: "#1F41BB",
   },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  badge: {
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
+  },
   badgeText: { color: "#FFF", fontSize: moderateScale(12), fontWeight: "bold" },
-  enviadoPor: { fontSize: moderateScale(13), color: "#666", marginTop: 5 },
   divider: {
     height: 1,
     backgroundColor: "#EEE",
@@ -539,47 +765,55 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     color: "#888",
     fontWeight: "600",
-    marginBottom: 5,
+    marginBottom: verticalScale(5),
     textTransform: "uppercase",
   },
-  row: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: verticalScale(2),
+  },
   valueText: {
     fontSize: moderateScale(15),
     color: "#333",
-    marginLeft: 6,
+    marginLeft: scale(6),
     flex: 1,
   },
   observacaoText: {
     fontSize: moderateScale(15),
     color: "#444",
-    lineHeight: 22,
+    lineHeight: verticalScale(22),
   },
   input: {
     backgroundColor: "#F9F9F9",
     borderWidth: 1,
     borderColor: "#DDD",
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: moderateScale(8),
+    padding: moderateScale(12),
     fontSize: moderateScale(15),
     color: "#333",
   },
 
-  // NOVA CAIXA DE RESPOSTA
+  // CAIXA DE RESPOSTA
   respostaBox: {
-    marginTop: 15,
+    marginTop: verticalScale(15),
     backgroundColor: "#E4EBF7",
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 4,
+    padding: moderateScale(12),
+    borderRadius: moderateScale(8),
+    borderLeftWidth: scale(4),
     borderLeftColor: "#1F41BB",
   },
   respostaTitle: {
     fontSize: moderateScale(14),
     fontWeight: "bold",
     color: "#1F41BB",
-    marginBottom: 5,
+    marginBottom: verticalScale(5),
   },
-  respostaText: { fontSize: moderateScale(14), color: "#333", lineHeight: 20 },
+  respostaText: {
+    fontSize: moderateScale(14),
+    color: "#333",
+    lineHeight: verticalScale(20),
+  },
 
   adminCard: {
     backgroundColor: "#E8EEF2",
@@ -592,33 +826,49 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     fontWeight: "bold",
     color: "#1F41BB",
-    marginBottom: 15,
+    marginBottom: verticalScale(15),
     textAlign: "center",
   },
 
-  // NOVO BOTÃO DE SETOR
+  // BOTÃO DE SETOR E FOTO
   sectorButton: {
     backgroundColor: "#F9F9F9",
     borderWidth: 1,
     borderColor: "#DDD",
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: moderateScale(8),
+    padding: moderateScale(12),
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: verticalScale(15),
   },
   sectorButtonText: { fontSize: moderateScale(15), color: "#333" },
 
-  actionButtons: { marginTop: 10 },
+  photoButton: {
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderStyle: "dashed",
+    borderRadius: moderateScale(8),
+    padding: moderateScale(15),
+    alignItems: "center",
+    marginBottom: verticalScale(20),
+  },
+  photoButtonText: {
+    fontSize: moderateScale(14),
+    color: "#666",
+    fontWeight: "500",
+  },
+
+  actionButtons: { marginTop: verticalScale(10) },
   saveBtn: {
     backgroundColor: "#1F41BB",
-    padding: 15,
-    borderRadius: 10,
+    padding: moderateScale(15),
+    borderRadius: moderateScale(10),
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: verticalScale(10),
   },
   saveBtnText: {
     color: "#FFF",
@@ -627,8 +877,8 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     backgroundColor: "#CCC",
-    padding: 15,
-    borderRadius: 10,
+    padding: moderateScale(15),
+    borderRadius: moderateScale(10),
     alignItems: "center",
   },
   cancelBtnText: {
@@ -638,19 +888,19 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     backgroundColor: "#1F41BB",
-    padding: 15,
-    borderRadius: 10,
+    padding: moderateScale(15),
+    borderRadius: moderateScale(10),
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 15,
+    marginBottom: verticalScale(15),
   },
   deleteBtn: {
     backgroundColor: "#FFEBEA",
     borderWidth: 1,
     borderColor: "#FFD2D0",
-    padding: 15,
-    borderRadius: 10,
+    padding: moderateScale(15),
+    borderRadius: moderateScale(10),
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
@@ -668,7 +918,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  closePhotoBtn: { position: "absolute", top: 50, right: 20, zIndex: 10 },
+  closePhotoBtn: {
+    position: "absolute",
+    top: verticalScale(50),
+    right: scale(20),
+    zIndex: 10,
+  },
   fullScreenImage: { width: "100%", height: "80%" },
 
   modalSectorOverlay: {
@@ -678,16 +933,16 @@ const styles = StyleSheet.create({
   },
   modalSectorContent: {
     backgroundColor: "#FFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: moderateScale(20),
+    borderTopRightRadius: moderateScale(20),
+    padding: moderateScale(20),
     maxHeight: "60%",
   },
   modalSectorHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: verticalScale(20),
   },
   modalSectorTitle: {
     fontSize: moderateScale(18),
@@ -698,14 +953,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 15,
+    paddingVertical: verticalScale(15),
     borderBottomWidth: 1,
     borderBottomColor: "#EEE",
   },
   sectorListItemActive: {
     backgroundColor: "#F4F7F8",
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: moderateScale(8),
+    paddingHorizontal: scale(10),
     borderBottomWidth: 0,
   },
   sectorListText: { fontSize: moderateScale(16), color: "#555" },
