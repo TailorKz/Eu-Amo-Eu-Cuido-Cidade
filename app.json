@@ -15,7 +15,8 @@
       "package": "com.ipora.euamoeucuido",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.tailorkz.euamoeucuido"
+      "package": "com.tailorkz.euamoeucuido",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "web": {
       "output": "static",
