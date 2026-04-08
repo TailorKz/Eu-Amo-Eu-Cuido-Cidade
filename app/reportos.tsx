@@ -23,18 +23,19 @@ interface Report {
   localizacao: string;
   status: "PENDENTE" | "EM_ANDAMENTO" | "RESOLVIDO";
   urlImagem: string;
+  protocolo?: string;
 }
 
 export default function Reportos() {
   const router = useRouter();
-  // 🔴 NOVO: Adicionado "fiscalizacao" aos tipos possíveis de aba
+  // Adicionado "fiscalizacao" aos tipos possíveis de aba
   const [activeTab, setActiveTab] = useState<"meus" | "setor" | "fiscalizacao">(
     "meus",
   );
 
   const [meusReportos, setMeusReportos] = useState<Report[]>([]);
   const [reportosSetor, setReportosSetor] = useState<Report[]>([]);
-  const [reportosVereador, setReportosVereador] = useState<Report[]>([]); // 🔴 NOVO
+  const [reportosVereador, setReportosVereador] = useState<Report[]>([]); 
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -45,7 +46,7 @@ export default function Reportos() {
     user?.perfil === "FUNCIONARIO" ||
     user?.perfil === "GESTOR_SETOR" ||
     user?.perfil === "SUPER_ADMIN";
-  // 🔴 NOVO: Identifica se é vereador
+  // Identifica se é vereador
   const isVereador = user?.perfil === "VEREADOR";
 
   const meuSetor = user?.setorAtuacao;
@@ -77,7 +78,7 @@ export default function Reportos() {
     }
   }
 
-  // 🔴 NOVO: Função exclusiva que busca a lista do Vereador
+  // busca a lista do Vereador
   async function carregarReportosVereador() {
     if (!isVereador) return;
     try {
@@ -170,9 +171,12 @@ export default function Reportos() {
 
       <View style={styles.cardInfo}>
         <View style={styles.cardHeader}>
-          <Text style={styles.categoryTitle}>{item.categoria}</Text>
+          <Text style={styles.categoryTitle}>{item.protocolo ? `Protocolo ${item.protocolo}` : `Solicitação #${item.id}`}</Text>
           <Text style={styles.dateText}>{formatarData(item.dataCriacao)}</Text>
         </View>
+        <Text style={{ fontSize: moderateScale(13), color: "#1F41BB", fontWeight: "600", marginTop: verticalScale(4) }}>
+          Setor: {item.categoria}
+        </Text>
 
         <View style={styles.locationRow}>
           <Ionicons

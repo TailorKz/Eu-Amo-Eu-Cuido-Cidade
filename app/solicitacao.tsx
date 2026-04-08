@@ -197,13 +197,14 @@ export default function Solicitacao() {
         type: type,
       } as any);
 
-      await axios.post(url, formData, {
+      const response = await axios.post(url, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      const protocolo = response.data.protocolo || "Gerado";
       Alert.alert(
         "Sucesso!",
-        "A sua solicitação foi enviada para a prefeitura.",
+        `A sua solicitação foi enviada para a prefeitura!\n\nProtocolo: ${protocolo}`,
         [{ text: "OK", onPress: () => router.replace("/home") }],
       );
     } catch (error) {

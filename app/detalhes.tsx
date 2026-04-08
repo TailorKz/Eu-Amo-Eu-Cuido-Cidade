@@ -185,7 +185,9 @@ export default function Detalhes() {
           <TouchableOpacity onPress={() => router.back()} style={{ padding: moderateScale(5) }}>
             <Ionicons name="arrow-back" size={moderateScale(24)} color="#1F41BB" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Detalhes da Solicitação</Text>
+          <Text style={styles.headerTitle}>
+          {chamado.protocolo ? `Protocolo ${chamado.protocolo}` : "Detalhes da Solicitação"}
+        </Text>
           <View style={{ width: scale(24) }} />
         </View>
 
