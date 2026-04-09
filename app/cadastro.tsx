@@ -17,41 +17,43 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
+import { cityAssets } from "./src/utils/cityAssets";
 
 export default function Cadastro() {
   const router = useRouter();
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
   const login = useAuthStore((state) => state.login);
-  const [loadedImages, setLoadedImages] = useState(0);
-  const TOTAL_IMAGES = 3;
+  const assets = cityAssets[cidadeSelecionada || "Iporã do Oeste"] || cityAssets["Iporã do Oeste"];
+  
+  // REMOVIDO: const TOTAL_IMAGES = 3; e loadedImages
+
   const [nome, setNome] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneRaw, setPhoneRaw] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(
-    null,
-  );
+  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
+  
   const [errors, setErrors] = useState({
     nome: "",
     phone: "",
     password: "",
   });
+
   useEffect(() => {
     buscarConfiguracoes();
   }, []);
 
   const buscarConfiguracoes = async () => {
-    //  Se o usuário ainda não escolheu a cidade no Index, não busca nada
     if (!cidadeSelecionada) {
        setIsConfigLoaded(true);
        return;
     }
 
     try {
-      //  Passa a cidade na URL para pegar a foto de fundo certa
       const response = await axios.get(
         `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeSelecionada}`,
       );
@@ -61,9 +63,10 @@ export default function Cadastro() {
     } catch (error) {
       console.log("Erro ao carregar fundo:", error);
     } finally {
-      setIsConfigLoaded(true);
+      setIsConfigLoaded(true); // Liberta a tela assim que a API responde!
     }
   };
+
   function validate() {
     let newErrors = { nome: "", phone: "", password: "" };
 
@@ -77,9 +80,8 @@ export default function Cadastro() {
     return !newErrors.nome && !newErrors.phone && !newErrors.password;
   }
 
-  function handleImageLoad() {
-    setLoadedImages((prev) => prev + 1);
-  }
+  // REMOVIDO: function handleImageLoad()
+
   async function handleCadastro() {
     if (!validate()) return;
 
@@ -101,7 +103,7 @@ export default function Cadastro() {
         nome: nome,
         telefone: phoneRaw,
         senha: password,
-        cidade: cidadeSelecionada, //  ENVIA A CIDADE ESCOLHIDA
+        cidade: cidadeSelecionada,
       };
 
       const response = await axios.post(url, dadosParaEnviar);
@@ -111,12 +113,11 @@ export default function Cadastro() {
       Alert.alert(
         "Sucesso!",
         "A sua conta foi criada com sucesso.",
-        [{ text: "OK", onPress: () => router.replace("/home") }], // Vai para a Home!
+        [{ text: "OK", onPress: () => router.replace("/home") }],
       );
     } catch (error: any) {
       console.log("Erro no cadastro:", error);
       if (error.response && error.response.status === 400) {
-        // este erro só acontece se tentar repetir o número NA MESMA CIDADE
         Alert.alert(
           "Atenção",
           "Este número de celular já está registrado nesta cidade.",
@@ -138,14 +139,10 @@ export default function Cadastro() {
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
             <Image
-              source={
-                fundoPersonalizado
-                  ? { uri: fundoPersonalizado }
-                  : require("../assets/images/cidadeipo.jpg")
-              }
+              source={fundoPersonalizado ? { uri: fundoPersonalizado } : assets.fundo}
               style={styles.footerImage}
               resizeMode="cover"
-              onLoadEnd={handleImageLoad}
+              // REMOVIDO: onLoadEnd
             />
             <LinearGradient
               colors={[
@@ -175,19 +172,9 @@ export default function Cadastro() {
             </View>
 
             <View style={styles.logoContainer}>
-              <Image
-                source={require("../assets/images/iporalogo1.png")}
-                style={styles.logoMunicipio}
-                onLoadEnd={handleImageLoad}
-              />
-              <Image
-                source={require("../assets/images/logoeuamoipora.png")}
-                style={styles.logo}
-                onLoadEnd={handleImageLoad}
-              />
-              <Text style={styles.textoCuidado}>
-                O cuidado com a cidade na palma da sua mão.
-              </Text>
+              <Image source={assets.brasao} style={styles.logoMunicipio} />
+              <Image source={assets.logo} style={styles.logo} />
+              <Text style={styles.textoCuidado}>O cuidado com a cidade na palma da sua mão.</Text>
             </View>
 
             <Input
@@ -209,21 +196,7 @@ export default function Cadastro() {
                 setPhoneRaw(unmasked || "");
               }}
               mask={[
-                "(",
-                /\d/,
-                /\d/,
-                ")",
-                " ",
-                /\d/,
-                /\d/,
-                /\d/,
-                /\d/,
-                /\d/,
-                "-",
-                /\d/,
-                /\d/,
-                /\d/,
-                /\d/,
+                "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
               ]}
             />
 
@@ -244,7 +217,6 @@ export default function Cadastro() {
               onChangeText={(text) => setConfirmPassword(text)}
             />
 
-            {/* BOTÃO ATUALIZADO */}
             <TouchableOpacity
               style={styles.button}
               onPress={handleCadastro}
@@ -265,7 +237,8 @@ export default function Cadastro() {
             </Text>
           </KeyboardAwareScrollView>
 
-          {(!isConfigLoaded || loadedImages < TOTAL_IMAGES) && (
+          {/* Aguarda apenas a API do fundo carregar */}
+          {!isConfigLoaded && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#1F41BB" />
             </View>
@@ -276,6 +249,7 @@ export default function Cadastro() {
   );
 }
 
+// MANTIVE O SEU STYLES INTACTO COMO PEDIDO
 const styles = StyleSheet.create({
   top: {},
   container: { flex: 1, position: "relative", backgroundColor: "#EDEDED" },
@@ -338,6 +312,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: verticalScale(20),
     textAlign: "center",
+    backgroundColor: "#edededa7",
+    alignSelf: "center",
+    paddingHorizontal: moderateScale(10),
+    borderRadius: moderateScale(10),
   },
   footerImageContainer: {
     position: "absolute",

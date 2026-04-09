@@ -21,27 +21,35 @@ import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, verticalScale } from "./src/utils/responsive";
-import { cityAssets } from "./src/utils/cityAssets"; // 🔴 IMPORTA O DICIONÁRIO
+import { cityAssets } from "./src/utils/cityAssets";
 
 export default function Login() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
-  
-  // 🔴 PUXA AS IMAGENS DA CIDADE INSTANTANEAMENTE (Sem internet)
-  const assets = cityAssets[cidadeSelecionada || "Iporã do Oeste"] || cityAssets["Iporã do Oeste"];
 
-  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
+  //  PUXA AS IMAGENS DA CIDADE INSTANTANEAMENTE (Sem internet)
+  const assets =
+    cityAssets[cidadeSelecionada || "Iporã do Oeste"] ||
+    cityAssets["Iporã do Oeste"];
+
+  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(
+    null,
+  );
 
   const [phone, setPhone] = useState("");
   const [phoneRaw, setPhoneRaw] = useState("");
   const [password, setPassword] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Estado que controla se a API já respondeu sobre o fundo
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
   const [isForgotModalVisible, setIsForgotModalVisible] = useState(false);
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
-  const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] = useState(false);
+  const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] =
+    useState(false);
   const [forgotPhone, setForgotPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -52,7 +60,12 @@ export default function Login() {
   }, []);
 
   const buscarConfiguracoesBackground = async () => {
-    if (!cidadeSelecionada) return;
+    // Se não tiver cidade, libera a tela logo
+    if (!cidadeSelecionada) {
+      setIsConfigLoaded(true);
+      return;
+    }
+
     try {
       const response = await axios.get(
         `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeSelecionada}`,
@@ -62,7 +75,10 @@ export default function Login() {
       }
     } catch (error) {
       console.log("A usar imagem local (Offline ou sem imagem na API).");
-    } 
+    } finally {
+      //  Libera a tela independentemente de ter dado certo ou erro na API
+      setIsConfigLoaded(true);
+    }
   };
 
   function validate() {
@@ -76,13 +92,21 @@ export default function Login() {
   async function handleLogin() {
     if (!validate()) return;
     if (!cidadeSelecionada) {
-      Alert.alert("Atenção", "Por favor, volte e escolha a sua cidade na tela inicial.");
+      Alert.alert(
+        "Atenção",
+        "Por favor, volte e escolha a sua cidade na tela inicial.",
+      );
       return;
     }
     setIsLoading(true);
     try {
-      const url = "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
-      const dadosDeLogin = { telefone: phoneRaw, senha: password, cidade: cidadeSelecionada };
+      const url =
+        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
+      const dadosDeLogin = {
+        telefone: phoneRaw,
+        senha: password,
+        cidade: cidadeSelecionada,
+      };
       const response = await axios.post(url, dadosDeLogin);
       login(response.data);
       router.replace("/home");
@@ -90,7 +114,10 @@ export default function Login() {
       if (error.response && error.response.status === 401) {
         Alert.alert("Acesso Negado", "Número de celular ou senha incorretos.");
       } else {
-        Alert.alert("Erro de Conexão", "Não foi possível conectar ao servidor. Verifique sua rede.");
+        Alert.alert(
+          "Erro de Conexão",
+          "Não foi possível conectar ao servidor. Verifique sua rede.",
+        );
       }
     } finally {
       setIsLoading(false);
@@ -116,7 +143,10 @@ export default function Login() {
       Alert.alert("Atenção", "A senha deve ter pelo menos 8 caracteres.");
       return;
     }
-    Alert.alert("Sucesso!", "Sua senha foi redefinida. Faça o login para continuar.");
+    Alert.alert(
+      "Sucesso!",
+      "Sua senha foi redefinida. Faça o login para continuar.",
+    );
     setIsNewPasswordModalVisible(false);
     setNewPassword("");
     setForgotPhone("");
@@ -127,14 +157,21 @@ export default function Login() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
-            {/* 🔴 HÍBRIDO: Se tiver URL usa URL, se não usa a foto do Dicionário Local */}
+            {/* Se tiver URL usa URL, se não usa a foto do Dicionário Local */}
             <Image
-              source={fundoPersonalizado ? { uri: fundoPersonalizado } : assets.fundo}
+              source={
+                fundoPersonalizado ? { uri: fundoPersonalizado } : assets.fundo
+              }
               style={styles.footerImage}
               resizeMode="cover"
             />
             <LinearGradient
-              colors={["rgba(237,237,237,1)", "rgba(237,237,237,0.8)", "rgba(237,237,237,0.4)", "rgba(237,237,237,0.3)"]}
+              colors={[
+                "rgba(237,237,237,1)",
+                "rgba(237,237,237,0.8)",
+                "rgba(237,237,237,0.4)",
+                "rgba(237,237,237,0.3)",
+              ]}
               style={styles.gradientOverlay}
             />
           </View>
@@ -147,14 +184,21 @@ export default function Login() {
             overScrollMode="never"
           >
             <View style={styles.top}>
-              <LinearGradient colors={["#87CDE9", "#1F41BB"]} start={{ x: 1.5, y: 0 }} end={{ x: 0, y: 0 }} style={styles.background} />
+              <LinearGradient
+                colors={["#87CDE9", "#1F41BB"]}
+                start={{ x: 1.5, y: 0 }}
+                end={{ x: 0, y: 0 }}
+                style={styles.background}
+              />
             </View>
 
             <View style={styles.logoContainer}>
-              {/* 🔴 CARREGA O BRASÃO E A LOGO DO DICIONÁRIO LOCAL */}
+              {/* CARREGA O BRASÃO E A LOGO DO DICIONÁRIO LOCAL */}
               <Image source={assets.brasao} style={styles.logoMunicipio} />
               <Image source={assets.logo} style={styles.logo} />
-              <Text style={styles.textoCuidado}>O cuidado com a cidade na palma da sua mão.</Text>
+              <Text style={styles.textoCuidado}>
+                O cuidado com a cidade na palma da sua mão.
+              </Text>
             </View>
 
             <Input
@@ -163,8 +207,13 @@ export default function Login() {
               value={phone}
               keyboardType="numeric"
               error={errors.phone}
-              onChangeText={(masked, unmasked) => { setPhone(masked); setPhoneRaw(unmasked || ""); }}
-              mask={["(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/]}
+              onChangeText={(masked, unmasked) => {
+                setPhone(masked);
+                setPhoneRaw(unmasked || "");
+              }}
+              mask={[
+                "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
+              ]}
             />
             <Input
               placeholder="Senha:"
@@ -179,32 +228,67 @@ export default function Login() {
               <Text style={styles.textoEsqueceu}>Esqueceu sua senha?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-              {isLoading ? <ActivityIndicator size="large" color="#FFF" /> : <Text style={styles.buttonText}>Entrar</Text>}
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#FFF" />
+              ) : (
+                <Text style={styles.buttonText}>Entrar</Text>
+              )}
             </TouchableOpacity>
 
-            <Text onPress={() => router.push("/cadastro")} style={styles.textoFinal}>Quer criar uma conta? Clique aqui</Text>
+            <Text
+              onPress={() => router.push("/cadastro")}
+              style={styles.textoFinal}
+            >
+              Quer criar uma conta? Clique aqui
+            </Text>
           </KeyboardAwareScrollView>
 
-          {/* ================================================= */}
-          {/* AS MODAIS CONTINUAM EXATAMENTE IGUAIS...          */}
-          {/* ================================================= */}
-          <Modal visible={isForgotModalVisible} transparent animationType="slide">
+          {/* OVERLAY DE CARREGAMENTO (Só aparece enquanto a API não responde o Fundo) */}
+          {!isConfigLoaded && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#1F41BB" />
+            </View>
+          )}
+
+          <Modal
+            visible={isForgotModalVisible}
+            transparent
+            animationType="slide"
+          >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Recuperar Senha</Text>
-                <Text style={styles.modalSubtitle}>Digite o número cadastrado. Enviaremos um código via WhatsApp.</Text>
+                <Text style={styles.modalSubtitle}>
+                  Digite o número cadastrado. Enviaremos um código via WhatsApp.
+                </Text>
                 <MaskInput
                   style={styles.modalInput}
                   placeholder="(00) 00000-0000"
                   keyboardType="numeric"
                   value={forgotPhone}
                   onChangeText={(masked) => setForgotPhone(masked)}
-                  mask={["(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/]}
+                  mask={[
+                    "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
+                  ]}
                 />
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity style={styles.btnCancel} onPress={() => setIsForgotModalVisible(false)}><Text style={styles.btnCancelText}>Cancelar</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.btnConfirm} onPress={handleRequestPasswordReset}><Text style={styles.btnConfirmText}>Enviar</Text></TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.btnCancel}
+                    onPress={() => setIsForgotModalVisible(false)}
+                  >
+                    <Text style={styles.btnCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.btnConfirm}
+                    onPress={handleRequestPasswordReset}
+                  >
+                    <Text style={styles.btnConfirmText}>Enviar</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -217,15 +301,37 @@ export default function Login() {
             description={`Enviamos um código no Whatsapp do número: ${forgotPhone}`}
           />
 
-          <Modal visible={isNewPasswordModalVisible} transparent animationType="slide">
+          <Modal
+            visible={isNewPasswordModalVisible}
+            transparent
+            animationType="slide"
+          >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Criar Nova Senha</Text>
-                <Text style={styles.modalSubtitle}>O código foi validado! Digite sua nova senha de acesso.</Text>
-                <TextInput style={styles.modalInput} placeholder="Nova senha (min. 8 caracteres)" secureTextEntry value={newPassword} onChangeText={setNewPassword} />
+                <Text style={styles.modalSubtitle}>
+                  O código foi validado! Digite sua nova senha de acesso.
+                </Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Nova senha (min. 8 caracteres)"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                />
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity style={styles.btnCancel} onPress={() => setIsNewPasswordModalVisible(false)}><Text style={styles.btnCancelText}>Cancelar</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.btnConfirm} onPress={saveRecoveredPassword}><Text style={styles.btnConfirmText}>Salvar Senha</Text></TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.btnCancel}
+                    onPress={() => setIsNewPasswordModalVisible(false)}
+                  >
+                    <Text style={styles.btnCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.btnConfirm}
+                    onPress={saveRecoveredPassword}
+                  >
+                    <Text style={styles.btnConfirmText}>Salvar Senha</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -240,26 +346,160 @@ const styles = StyleSheet.create({
   top: {},
   container: { flex: 1, position: "relative", backgroundColor: "#EDEDED" },
   content: { paddingBottom: verticalScale(200), zIndex: 1 },
-  background: { position: "absolute", left: 0, right: 0, top: 0, height: verticalScale(120), borderBottomLeftRadius: moderateScale(30), borderBottomRightRadius: moderateScale(30) },
-  logoMunicipio: { width: moderateScale(120), height: moderateScale(120), marginBottom: verticalScale(20), zIndex: 1 },
-  logoContainer: { marginTop: verticalScale(120) - moderateScale(60), alignItems: "center" },
-  logo: { width: moderateScale(200), alignSelf: "center", height: moderateScale(100), marginTop: -verticalScale(15), zIndex: 2 },
-  textoCuidado: { color: "#3A6C77", marginTop: verticalScale(15), fontSize: moderateScale(15), fontWeight: "600", marginBottom: verticalScale(40), textAlign: "center" },
-  button: { height: moderateScale(60), width: "80%", alignSelf: "center", justifyContent: "center", borderRadius: moderateScale(10), paddingHorizontal: moderateScale(10), paddingVertical: moderateScale(10), backgroundColor: "#1F41BB", fontSize: moderateScale(18), marginTop: moderateScale(20) },
-  buttonText: { fontSize: moderateScale(24), color: "#ffffff", textAlign: "center", fontWeight: "600" },
-  textoFinal: { marginTop: verticalScale(20), color: "#39555c", fontSize: moderateScale(15), fontWeight: "600", marginBottom: verticalScale(20), textAlign: "center" },
-  footerImageContainer: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: -1 },
+  background: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: verticalScale(120),
+    borderBottomLeftRadius: moderateScale(30),
+    borderBottomRightRadius: moderateScale(30),
+  },
+  logoMunicipio: {
+    width: moderateScale(120),
+    height: moderateScale(120),
+    marginBottom: verticalScale(20),
+    zIndex: 1,
+  },
+  logoContainer: {
+    marginTop: verticalScale(120) - moderateScale(60),
+    alignItems: "center",
+  },
+  logo: {
+    width: moderateScale(200),
+    alignSelf: "center",
+    height: moderateScale(100),
+    marginTop: -verticalScale(15),
+    zIndex: 2,
+  },
+  textoCuidado: {
+    color: "#3A6C77",
+    marginTop: verticalScale(15),
+    fontSize: moderateScale(15),
+    fontWeight: "600",
+    marginBottom: verticalScale(40),
+    textAlign: "center",
+  },
+  button: {
+    height: moderateScale(60),
+    width: "80%",
+    alignSelf: "center",
+    justifyContent: "center",
+    borderRadius: moderateScale(10),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(10),
+    backgroundColor: "#1F41BB",
+    fontSize: moderateScale(18),
+    marginTop: moderateScale(20),
+  },
+  buttonText: {
+    fontSize: moderateScale(24),
+    color: "#ffffff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  textoFinal: {
+    marginTop: verticalScale(20),
+    color: "#39555c",
+    fontSize: moderateScale(15),
+    fontWeight: "600",
+    marginBottom: verticalScale(20),
+    textAlign: "center",
+    backgroundColor: "#edededa7",
+    alignSelf: "center",
+    paddingHorizontal: moderateScale(10),
+    borderRadius: moderateScale(10),
+  },
+  footerImageContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: -1,
+  },
   footerImage: { width: "100%", height: Math.min(verticalScale(320), 340) },
-  textoEsqueceu: { color: "#3A6C77", fontSize: moderateScale(13), fontWeight: "600", textAlign: "right", marginRight: moderateScale(20), paddingVertical: 10 },
-  gradientOverlay: { position: "absolute", top: 0, left: 0, right: 0, height: "100%" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
-  modalContent: { backgroundColor: "#FFF", width: "100%", borderRadius: 20, padding: 24, elevation: 10 },
-  modalTitle: { fontSize: 20, fontWeight: "bold", color: "#333", textAlign: "center", marginBottom: 10 },
-  modalSubtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 20, lineHeight: 20 },
-  modalInput: { backgroundColor: "#F3F4F6", borderRadius: 12, padding: 15, fontSize: 16, marginBottom: 15, borderWidth: 1, borderColor: "#E5E7EB" },
-  modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
-  btnCancel: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: "#F3F4F6", marginRight: 10, alignItems: "center" },
+  textoEsqueceu: {
+    color: "#3A6C77",
+    fontSize: moderateScale(13),
+    fontWeight: "600",
+    textAlign: "right",
+    marginRight: moderateScale(20),
+    paddingVertical: 10,
+  },
+  gradientOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "100%",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#FFF",
+    width: "100%",
+    borderRadius: 20,
+    padding: 24,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalInput: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  btnCancel: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    marginRight: 10,
+    alignItems: "center",
+  },
   btnCancelText: { color: "#666", fontWeight: "bold", fontSize: 16 },
-  btnConfirm: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: "#1F41BB", marginLeft: 10, alignItems: "center" },
+  btnConfirm: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: "#1F41BB",
+    marginLeft: 10,
+    alignItems: "center",
+  },
   btnConfirmText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
+  
+  // Classe para cobrir a tela enquanto a API responde
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#EDEDED",
+    zIndex: 999,
+  },
 });
