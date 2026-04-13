@@ -11,8 +11,8 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Select, SelectRef } from "./src/components/Select"; // 🔴 Importamos o SelectRef
-import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+import { Select, SelectRef } from "./src/components/Select"; 
+import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
 import { useAuthStore } from "./src/store/useAuthStore";
 
 const { width } = Dimensions.get("window");
@@ -21,23 +21,24 @@ export default function HomeScreen() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   
-  // 🔴 1. Cria a variável que vai segurar o controle remoto do Select
   const selectRef = useRef<SelectRef>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   if (isAuthenticated) {
     return <Redirect href="/home" />;
   }
 
-  // 🔴 2. Função inteligente de navegação
   const handleNavigation = (path: "/login" | "/cadastro") => {
-    // Busca na memória NA HORA DO CLIQUE se tem cidade
     const cidadeAtual = useAuthStore.getState().cidadeSelecionada;
 
     if (!cidadeAtual) {
       Alert.alert("Atenção", "Por favor, escolha a sua cidade antes de continuar.");
-      
-      // MÁGICA 2: Aperta o botão do controle remoto para abrir o Select!
       selectRef.current?.openDropdown();
+      
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+      
       return;
     }
     
@@ -47,28 +48,40 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
+        ref={scrollViewRef} 
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>
           O cuidado com a cidade{"\n"}na palma da sua mão!
         </Text>
+
         <Image
           source={require("../assets/images/mao2.png")}
           style={styles.image}
           resizeMode="contain"
         />
+
         <View style={styles.content}>
           <View style={styles.bottomArea}>
             <Text style={styles.label}>Escolha sua cidade:</Text>
-            
-            {/* 🔴 3. Passa o controle remoto (ref) para o Select */}
             <Select
               ref={selectRef}
               placeholder="Escolha sua cidade"
               options={["Iporã do Oeste", "São Miguel do Oeste", "Itapiranga"]}
               onSelect={(value) => {
                 useAuthStore.getState().setCidadeSelecionada(value);
+              }}
+              onOpen={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 150); 
+              }}
+              // 🔴 NOVO: Retorna a tela ao topo suavemente quando fecha
+              onClose={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                }, 150);
               }}
             />
             
@@ -86,8 +99,6 @@ export default function HomeScreen() {
               >
                 <Text style={styles.secondaryText}>Entrar</Text>
               </TouchableOpacity>
-
-              
             </View>
           </View>
         </View>
@@ -95,11 +106,12 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#E9EAEC" },
-  container: { paddingTop: verticalScale(30) },
+  container: { paddingTop: verticalScale(30), paddingBottom: verticalScale(160) },
   title: {
-    fontSize: moderateScale(32),
+    fontSize: scaledFont(30),
     fontWeight: "700",
     color: "#1F41BB",
     textAlign: "center",
@@ -110,15 +122,15 @@ const styles = StyleSheet.create({
   },
   content: { paddingHorizontal: scale(24) },
   image: {
-    width: Math.min(scale(360), width * 0.95),
-    height: verticalScale(360),
-    alignSelf: "flex-start",
+    width: width * 0.92, 
+    height: width * 0.92, 
+    alignSelf: "flex-start", 
     marginBottom: verticalScale(20),
-    marginTop: verticalScale(20),
+    marginTop: verticalScale(10),
   },
   bottomArea: { width: "100%" },
   label: {
-    fontSize: moderateScale(26),
+    fontSize: scaledFont(28),
     fontWeight: "600",
     marginBottom: verticalScale(20),
     color: "#292D36",

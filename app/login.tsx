@@ -20,7 +20,7 @@ import MaskInput from "react-native-mask-input";
 import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, verticalScale } from "./src/utils/responsive";
+import { moderateScale, verticalScale, scale, scaledFont } from "./src/utils/responsive";
 import { cityAssets } from "./src/utils/cityAssets";
 
 export default function Login() {
@@ -28,30 +28,28 @@ export default function Login() {
   const login = useAuthStore((state) => state.login);
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
 
-  //  PUXA AS IMAGENS DA CIDADE INSTANTANEAMENTE (Sem internet)
   const assets =
     cityAssets[cidadeSelecionada || "Iporã do Oeste"] ||
     cityAssets["Iporã do Oeste"];
 
-  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(
-    null,
-  );
+  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
 
   const [phone, setPhone] = useState("");
   const [phoneRaw, setPhoneRaw] = useState("");
   const [password, setPassword] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Estado que controla se a API já respondeu sobre o fundo
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
   const [isForgotModalVisible, setIsForgotModalVisible] = useState(false);
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
-  const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] =
-    useState(false);
+  const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] = useState(false);
+  
   const [forgotPhone, setForgotPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  
+  // Estado para guardar o código de 4 dígitos digitado pelo usuário
+  const [codigoRecuperacao, setCodigoRecuperacao] = useState("");
 
   const [errors, setErrors] = useState({ phone: "", password: "" });
 
@@ -60,7 +58,6 @@ export default function Login() {
   }, []);
 
   const buscarConfiguracoesBackground = async () => {
-    // Se não tiver cidade, libera a tela logo
     if (!cidadeSelecionada) {
       setIsConfigLoaded(true);
       return;
@@ -76,7 +73,6 @@ export default function Login() {
     } catch (error) {
       console.log("A usar imagem local (Offline ou sem imagem na API).");
     } finally {
-      //  Libera a tela independentemente de ter dado certo ou erro na API
       setIsConfigLoaded(true);
     }
   };
@@ -100,8 +96,7 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
-      const url =
-        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
+      const url = "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
       const dadosDeLogin = {
         telefone: phoneRaw,
         senha: password,
@@ -124,32 +119,66 @@ export default function Login() {
     }
   }
 
-  const handleRequestPasswordReset = () => {
-    if (forgotPhone.replace(/\D/g, "").length < 11) {
+  // 🔴 1. SOLICITA O CÓDIGO
+  const handleRequestPasswordReset = async () => {
+    const numeroLimpo = forgotPhone.replace(/\D/g, "");
+    if (numeroLimpo.length < 11) {
       Alert.alert("Atenção", "Digite um número de celular válido com DDD.");
       return;
     }
-    setIsForgotModalVisible(false);
-    setTimeout(() => setIsCodeModalVisible(true), 500);
+    if (!cidadeSelecionada) {
+      Alert.alert("Atenção", "Volte e escolha a sua cidade na tela inicial.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await axios.post(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/solicitar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}`
+      );
+      
+      setIsForgotModalVisible(false);
+      setTimeout(() => setIsCodeModalVisible(true), 500);
+    } catch (error) {
+      Alert.alert("Erro", "Não encontramos uma conta com este número na sua cidade.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // 🔴 2. GUARDA O CÓDIGO VALIDADO
   const handleCodeConfirm = (code: string) => {
+    setCodigoRecuperacao(code); // Salva o código na memória
+    setNewPassword(""); // Limpa o campo de senha
     setIsCodeModalVisible(false);
     setTimeout(() => setIsNewPasswordModalVisible(true), 500);
   };
 
-  const saveRecoveredPassword = () => {
+  // 🔴 3. ENVIA A NOVA SENHA E O CÓDIGO
+  const saveRecoveredPassword = async () => {
     if (newPassword.length < 8) {
       Alert.alert("Atenção", "A senha deve ter pelo menos 8 caracteres.");
       return;
     }
-    Alert.alert(
-      "Sucesso!",
-      "Sua senha foi redefinida. Faça o login para continuar.",
-    );
-    setIsNewPasswordModalVisible(false);
-    setNewPassword("");
-    setForgotPhone("");
+
+    setIsLoading(true);
+    try {
+      const numeroLimpo = forgotPhone.replace(/\D/g, "");
+      
+      await axios.put(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/alterar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${codigoRecuperacao}&novaSenha=${newPassword}`
+      );
+      
+      Alert.alert("Sucesso!", "Sua senha foi redefinida. Faça o login para continuar.");
+      setIsNewPasswordModalVisible(false);
+      setNewPassword("");
+      setForgotPhone("");
+      setCodigoRecuperacao(""); // Limpa o código da memória
+    } catch (error) {
+      Alert.alert("Erro", "O código digitado está incorreto ou expirou.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -157,7 +186,6 @@ export default function Login() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <View style={styles.footerImageContainer} pointerEvents="none">
-            {/* Se tiver URL usa URL, se não usa a foto do Dicionário Local */}
             <Image
               source={
                 fundoPersonalizado ? { uri: fundoPersonalizado } : assets.fundo
@@ -193,7 +221,6 @@ export default function Login() {
             </View>
 
             <View style={styles.logoContainer}>
-              {/* CARREGA O BRASÃO E A LOGO DO DICIONÁRIO LOCAL */}
               <Image source={assets.brasao} style={styles.logoMunicipio} />
               <Image source={assets.logo} style={styles.logo} />
               <Text style={styles.textoCuidado}>
@@ -240,15 +267,14 @@ export default function Login() {
               )}
             </TouchableOpacity>
 
-            <Text
+            <TouchableOpacity 
+              style={styles.btnSecondary} 
               onPress={() => router.push("/cadastro")}
-              style={styles.textoFinal}
             >
-              Quer criar uma conta? Clique aqui
-            </Text>
+              <Text style={styles.btnSecondaryText}>Quer criar uma conta? Clique aqui</Text>
+            </TouchableOpacity>
           </KeyboardAwareScrollView>
 
-          {/* OVERLAY DE CARREGAMENTO (Só aparece enquanto a API não responde o Fundo) */}
           {!isConfigLoaded && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#1F41BB" />
@@ -286,8 +312,13 @@ export default function Login() {
                   <TouchableOpacity
                     style={styles.btnConfirm}
                     onPress={handleRequestPasswordReset}
+                    disabled={isLoading}
                   >
-                    <Text style={styles.btnConfirmText}>Enviar</Text>
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <Text style={styles.btnConfirmText}>Enviar</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -329,8 +360,13 @@ export default function Login() {
                   <TouchableOpacity
                     style={styles.btnConfirm}
                     onPress={saveRecoveredPassword}
+                    disabled={isLoading}
                   >
-                    <Text style={styles.btnConfirmText}>Salvar Senha</Text>
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <Text style={styles.btnConfirmText}>Salvar Senha</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -398,17 +434,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
   },
-  textoFinal: {
-    marginTop: verticalScale(20),
-    color: "#39555c",
-    fontSize: moderateScale(15),
-    fontWeight: "600",
-    marginBottom: verticalScale(20),
-    textAlign: "center",
-    backgroundColor: "#edededa7",
+  btnSecondary: {
+    marginTop: verticalScale(15),
     alignSelf: "center",
-    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: scale(20),
     borderRadius: moderateScale(10),
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderWidth: 1,
+    borderColor: "#1F41BB",
+    marginBottom: verticalScale(20),
+  },
+  btnSecondaryText: {
+    color: "#1F41BB",
+    fontSize: moderateScale(15),
+    fontWeight: "700",
+    textAlign: "center",
   },
   footerImageContainer: {
     position: "absolute",
@@ -493,8 +534,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnConfirmText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
-  
-  // Classe para cobrir a tela enquanto a API responde
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",

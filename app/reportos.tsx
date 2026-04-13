@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
 
 interface Report {
   id: number;
@@ -94,7 +94,7 @@ export default function Reportos() {
     setIsLoading(true);
     await carregarMeusReportos();
     await carregarReportosDoSetor();
-    await carregarReportosVereador(); // 🔴 NOVO
+    await carregarReportosVereador();
     setIsLoading(false);
   }
 
@@ -102,7 +102,7 @@ export default function Reportos() {
     setIsRefreshing(true);
     await carregarMeusReportos();
     await carregarReportosDoSetor();
-    await carregarReportosVereador(); // 🔴 NOVO
+    await carregarReportosVereador();
     setIsRefreshing(false);
   }
 
@@ -207,7 +207,6 @@ export default function Reportos() {
       <View style={styles.container}>
         <Text style={styles.pageTitle}>Solicitações</Text>
 
-        {/* 🔴 MODIFICADO: Renderiza as abas dependendo se é Funcionário ou Vereador */}
         {(isFuncionarioPrefeitura || isVereador) && (
           <View style={styles.tabContainer}>
             <TouchableOpacity
@@ -275,7 +274,7 @@ export default function Reportos() {
           />
         ) : (
           <FlatList
-            // 🔴 Lógica para renderizar a lista certa
+            // Lógica para renderizar a lista certa
             data={
               activeTab === "meus"
                 ? meusReportos
@@ -315,7 +314,7 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(10),
   },
   pageTitle: {
-    fontSize: moderateScale(24),
+    fontSize: scaledFont(26),
     fontWeight: "700",
     color: "#333",
     textAlign: "center",
@@ -343,7 +342,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  tabText: { fontSize: moderateScale(14), fontWeight: "600", color: "#666" },
+  tabText: { fontSize: scaledFont(14), fontWeight: "600", color: "#666" },
   tabTextActive: { color: "#1F41BB" },
   listContent: { paddingBottom: verticalScale(100) },
   emptyText: {
@@ -379,19 +378,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   categoryTitle: {
-    fontSize: moderateScale(16),
+    fontSize: scaledFont(18),
     fontWeight: "700",
     color: "#333",
     flex: 1,
   },
-  dateText: { fontSize: moderateScale(12), color: "#888", fontWeight: "500" },
+  dateText: { fontSize: scaledFont(16), color: "#888", fontWeight: "500" },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: verticalScale(4),
   },
   locationText: {
-    fontSize: moderateScale(13),
+    fontSize: scaledFont(14),
     color: "#666",
     marginLeft: scale(4),
     flex: 1,
@@ -408,7 +407,7 @@ const styles = StyleSheet.create({
     marginRight: scale(6),
   },
   statusText: {
-    fontSize: moderateScale(13),
+    fontSize: scaledFont(16),
     fontWeight: "600",
     color: "#444",
     textTransform: "capitalize",

@@ -1,112 +1,102 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios"; // 🔴 IMPORTAMOS O AXIOS
+import axios from "axios";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Keyboard,
     Modal,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import MaskInput from "react-native-mask-input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
+import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
 
 export default function Perfil() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const login = useAuthStore((state) => state.login); // Para atualizar os dados localmente
+  const login = useAuthStore((state) => state.login);
 
-  const [actionType, setActionType] = useState<"phone" | "password" | "delete">(
-    "phone",
-  );
+  const [actionType, setActionType] = useState<"phone" | "delete">("phone");
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
 
-  const [isSenhaAtualModalVisible, setIsSenhaAtualModalVisible] =
-    useState(false);
-  const [isNovoNumeroModalVisible, setIsNovoNumeroModalVisible] =
-    useState(false);
+  const [isSenhaAtualModalVisible, setIsSenhaAtualModalVisible] = useState(false);
+  const [isNovoNumeroModalVisible, setIsNovoNumeroModalVisible] = useState(false);
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novoNumero, setNovoNumero] = useState("");
 
-  const [isNovaSenhaModalVisible, setIsNovaSenhaModalVisible] = useState(false);
-  const [novaSenha, setNovaSenha] = useState("");
-  const [codigoValidado, setCodigoValidado] = useState("");
+  const [isTrocarSenhaModalVisible, setIsTrocarSenhaModalVisible] = useState(false);
+  const [senhaAtualTroca, setSenhaAtualTroca] = useState("");
+  const [novaSenhaTroca, setNovaSenhaTroca] = useState("");
+  const [confirmaNovaSenhaTroca, setConfirmaNovaSenhaTroca] = useState("");
 
-  const [isLoading, setIsLoading] = useState(false); // Para mostrar que está a carregar
+  const [isLoading, setIsLoading] = useState(false);
 
-  const API_URL =
-    "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos";
+  const API_URL = "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos";
 
   // ==========================================
-  // 1. ALTERAR SENHA
+  // 1. ALTERAR SENHA (DIRETO NA TELA)
   // ==========================================
-  const iniciarTrocaSenha = async () => {
-    setActionType("password");
-    setIsLoading(true);
-    try {
-      // 🔴 CHAMA O JAVA PARA GERAR O CÓDIGO E MANDAR O WHATSAPP
-      await axios.post(`${API_URL}/${user?.id}/solicitar-codigo?tipo=SENHA`);
-      setIsCodeModalVisible(true);
-    } catch (error) {
-      Alert.alert(
-        "Erro",
-        "Não foi possível solicitar o código. Tente novamente.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const iniciarTrocaSenha = () => {
+    setSenhaAtualTroca("");
+    setNovaSenhaTroca("");
+    setConfirmaNovaSenhaTroca("");
+    setIsTrocarSenhaModalVisible(true);
   };
 
   const salvarNovaSenha = async () => {
-    if (novaSenha.length < 6) {
-      Alert.alert("Atenção", "A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
+    if (!senhaAtualTroca) return Alert.alert("Atenção", "Digite sua senha atual.");
+    if (novaSenhaTroca.length < 8) return Alert.alert("Atenção", "A nova senha deve ter pelo menos 8 caracteres.");
+    if (novaSenhaTroca !== confirmaNovaSenhaTroca) return Alert.alert("Atenção", "A nova senha e a confirmação não coincidem.");
+
     setIsLoading(true);
     try {
-      // 🔴 CHAMA O JAVA PARA ALTERAR A SENHA
+      await axios.post(`${API_URL}/${user?.id}/verificar-senha`, senhaAtualTroca, {
+        headers: { "Content-Type": "text/plain" },
+      });
+
       await axios.put(
-        `${API_URL}/${user?.id}/alterar-senha?codigo=${codigoValidado}&novaSenha=${novaSenha}`,
+        `${API_URL}/${user?.id}/alterar-senha-direta?novaSenha=${novaSenhaTroca}`
       );
+
       Alert.alert("Sucesso!", "Sua senha foi alterada com segurança.");
-      setIsNovaSenhaModalVisible(false);
-      setNovaSenha("");
+      setIsTrocarSenhaModalVisible(false);
     } catch (error) {
-      Alert.alert("Erro", "Código inválido ou expirado.");
+      Alert.alert("Erro", "A senha atual está incorreta ou houve um erro.");
     } finally {
       setIsLoading(false);
     }
   };
 
   // ==========================================
-  // 2. VERIFICAR SENHA ATUAL (SEGURANÇA)
+  // 2. VERIFICAR SENHA ATUAL
   // ==========================================
   const iniciarTrocaNumero = () => {
     setActionType("phone");
+    setSenhaAtual("");
     setIsSenhaAtualModalVisible(true);
   };
 
   const iniciarExclusaoConta = () => {
     setActionType("delete");
+    setSenhaAtual("");
     setIsSenhaAtualModalVisible(true);
   };
 
   const confirmarSenhaAtual = async () => {
-    if (!senhaAtual)
-      return Alert.alert("Atenção", "Digite sua senha para continuar.");
+    if (!senhaAtual) return Alert.alert("Atenção", "Digite sua senha para continuar.");
 
     setIsLoading(true);
     try {
-      // 🔴 CHAMA O JAVA PARA VERIFICAR SE A SENHA BATE COM A DO BANCO
       await axios.post(`${API_URL}/${user?.id}/verificar-senha`, senhaAtual, {
         headers: { "Content-Type": "text/plain" },
       });
@@ -114,11 +104,9 @@ export default function Perfil() {
       setIsSenhaAtualModalVisible(false);
       setSenhaAtual("");
 
-      // Se a senha estiver correta, avança para o próximo passo
       if (actionType === "phone") {
         setTimeout(() => setIsNovoNumeroModalVisible(true), 500);
       } else if (actionType === "delete") {
-        // Se for para deletar, já pede o código para o número atual
         await axios.post(`${API_URL}/${user?.id}/solicitar-codigo?tipo=SENHA`);
         setTimeout(() => setIsCodeModalVisible(true), 500);
       }
@@ -134,46 +122,37 @@ export default function Perfil() {
   // ==========================================
   const solicitarCodigoNovoNumero = async () => {
     const numeroLimpo = novoNumero.replace(/\D/g, "");
-    if (numeroLimpo.length < 11)
-      return Alert.alert("Atenção", "Digite um celular válido.");
+    if (numeroLimpo.length < 11) return Alert.alert("Atenção", "Digite um celular válido.");
 
     setIsLoading(true);
     try {
-      // 🔴 CHAMA O JAVA PARA MANDAR O CÓDIGO PARA O *NOVO* NÚMERO
       await axios.post(
         `${API_URL}/${user?.id}/solicitar-codigo?tipo=NUMERO&novoNumero=${numeroLimpo}`,
       );
       setIsNovoNumeroModalVisible(false);
       setTimeout(() => setIsCodeModalVisible(true), 500);
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível enviar o código para este número.");
+      Alert.alert("Erro", "Não foi possível enviar o código.");
     } finally {
       setIsLoading(false);
     }
   };
 
   // ==========================================
-  // 4. VALIDAR O CÓDIGO DE 4 DÍGITOS
+  // 4. VALIDAR O CÓDIGO
   // ==========================================
   const handleCodeConfirm = async (code: string) => {
     setIsCodeModalVisible(false);
 
-    if (actionType === "password") {
-      setCodigoValidado(code);
-      setTimeout(() => setIsNovaSenhaModalVisible(true), 500);
-    } else if (actionType === "phone") {
+    if (actionType === "phone") {
       setIsLoading(true);
       try {
         const numeroLimpo = novoNumero.replace(/\D/g, "");
-        // 🔴 CHAMA O JAVA PARA SALVAR O NOVO NÚMERO E ATUALIZA A MEMÓRIA DO APP
         const response = await axios.put(
           `${API_URL}/${user?.id}/alterar-numero?codigo=${code}&novoNumero=${numeroLimpo}`,
         );
-        login(response.data); // Atualiza o Zustand com o novo telefone para aparecer na tela na hora!
-        Alert.alert(
-          "Sucesso!",
-          `Seu número foi atualizado para ${novoNumero}.`,
-        );
+        login(response.data); 
+        Alert.alert("Sucesso!", `Seu número foi atualizado para ${novoNumero}.`);
         setNovoNumero("");
       } catch (error) {
         Alert.alert("Erro", "Código inválido.");
@@ -183,14 +162,8 @@ export default function Perfil() {
     } else if (actionType === "delete") {
       setIsLoading(true);
       try {
-        // 🔴 CHAMA O JAVA PARA APAGAR A CONTA DEFINITIVAMENTE
-        await axios.delete(
-          `${API_URL}/${user?.id}/excluir-conta?codigo=${code}`,
-        );
-        Alert.alert(
-          "Conta Excluída",
-          "Sua conta e todos os seus dados foram apagados com sucesso.",
-        );
+        await axios.delete(`${API_URL}/${user?.id}/excluir-conta?codigo=${code}`);
+        Alert.alert("Conta Excluída", "Sua conta e dados foram apagados com sucesso.");
         logout();
         router.replace("/");
       } catch (error) {
@@ -206,6 +179,7 @@ export default function Perfil() {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled" 
       >
         <Text style={styles.pageTitle}>Meu Perfil</Text>
 
@@ -345,7 +319,62 @@ export default function Perfil() {
 
       <BottomMenu activeRoute="perfil" />
 
-      {/* MODAIS (MANTIDAS EXATAMENTE IGUAIS) */}
+      {/* 🔴 MODAL PARA TROCA DIRETA DE SENHA */}
+      <Modal visible={isTrocarSenhaModalVisible} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
+          <Pressable style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Alterar Senha</Text>
+            <Text style={styles.modalSubtitle}>
+              Digite sua senha atual e a nova senha desejada.
+            </Text>
+
+            <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
+              <Input
+                placeholder="Senha atual"
+                icon="key-outline"
+                secureTextEntry
+                value={senhaAtualTroca}
+                onChangeText={setSenhaAtualTroca}
+              />
+              <Input
+                placeholder="Nova senha (min. 8)"
+                icon="lock-closed-outline"
+                secureTextEntry
+                value={novaSenhaTroca}
+                onChangeText={setNovaSenhaTroca}
+              />
+              <Input
+                placeholder="Confirme nova senha"
+                icon="checkmark-circle-outline"
+                secureTextEntry
+                value={confirmaNovaSenhaTroca}
+                onChangeText={setConfirmaNovaSenhaTroca}
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.btnCancel}
+                onPress={() => setIsTrocarSenhaModalVisible(false)}
+              >
+                <Text style={styles.btnCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.btnConfirm}
+                onPress={salvarNovaSenha}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.btnConfirmText}>Salvar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <CodeVerificationModal
         visible={isCodeModalVisible}
         onClose={() => setIsCodeModalVisible(false)}
@@ -357,13 +386,10 @@ export default function Perfil() {
         }
       />
 
-      <Modal
-        visible={isSenhaAtualModalVisible}
-        transparent
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+      {/* 🔴 MODAL DE SENHA ATUAL */}
+      <Modal visible={isSenhaAtualModalVisible} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
+          <Pressable style={styles.modalContent}>
             <Ionicons
               name={actionType === "delete" ? "warning" : "shield-checkmark"}
               size={40}
@@ -377,13 +403,15 @@ export default function Perfil() {
                 : "Para alterar o número, digite sua senha atual."}
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Sua senha atual"
-              secureTextEntry
-              value={senhaAtual}
-              onChangeText={setSenhaAtual}
-            />
+            <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
+              <Input
+                placeholder="Digite sua senha atual"
+                icon="lock-closed-outline"
+                secureTextEntry
+                value={senhaAtual}
+                onChangeText={setSenhaAtual}
+              />
+            </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -407,46 +435,31 @@ export default function Perfil() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
-      <Modal
-        visible={isNovoNumeroModalVisible}
-        transparent
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+      {/* 🔴 MODAL DE NOVO NÚMERO */}
+      <Modal visible={isNovoNumeroModalVisible} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
+          <Pressable style={styles.modalContent}>
             <Text style={styles.modalTitle}>Novo Número</Text>
             <Text style={styles.modalSubtitle}>
               Enviaremos um SMS no seu Whatsapp para este novo número:
             </Text>
 
-            <MaskInput
-              style={styles.input}
-              placeholder="(00) 00000-0000"
-              keyboardType="numeric"
-              value={novoNumero}
-              onChangeText={(masked) => setNovoNumero(masked)}
-              mask={[
-                "(",
-                /\d/,
-                /\d/,
-                ")",
-                " ",
-                /\d/,
-                /\d/,
-                /\d/,
-                /\d/,
-                /\d/,
-                "-",
-                /\d/,
-                /\d/,
-                /\d/,
-                /\d/,
-              ]}
-            />
+            <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
+              <Input
+                placeholder="(00) 00000-0000"
+                icon="logo-whatsapp"
+                keyboardType="numeric"
+                value={novoNumero}
+                onChangeText={(masked) => setNovoNumero(masked || "")}
+                mask={[
+                  "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
+                ]}
+              />
+            </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -467,51 +480,8 @@ export default function Perfil() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={isNovaSenhaModalVisible}
-        transparent
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Criar Nova Senha</Text>
-            <Text style={styles.modalSubtitle}>
-              O código foi validado! Digite sua nova senha de acesso.
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Nova senha (min. 6 caracteres)"
-              secureTextEntry
-              value={novaSenha}
-              onChangeText={setNovaSenha}
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.btnCancel}
-                onPress={() => setIsNovaSenhaModalVisible(false)}
-              >
-                <Text style={styles.btnCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.btnConfirm}
-                onPress={salvarNovaSenha}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.btnConfirmText}>Salvar Senha</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -525,7 +495,7 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(120),
   },
   pageTitle: {
-    fontSize: moderateScale(24),
+    fontSize: scaledFont(28),
     fontWeight: "700",
     color: "#333",
     textAlign: "center",
@@ -544,11 +514,11 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: "#FFF",
-    fontSize: moderateScale(30),
+    fontSize: scaledFont(30),
     fontWeight: "bold",
   },
   userName: {
-    fontSize: moderateScale(22),
+    fontSize: scaledFont(22),
     fontWeight: "700",
     color: "#22",
     textTransform: "capitalize",
@@ -565,11 +535,11 @@ const styles = StyleSheet.create({
   cityText: {
     marginLeft: scale(4),
     color: "#1F41BB",
-    fontSize: moderateScale(13),
+    fontSize: scaledFont(15),
     fontWeight: "600",
   },
   sectionTitle: {
-    fontSize: moderateScale(14),
+    fontSize: scaledFont(18),
     color: "#888",
     fontWeight: "600",
     marginLeft: scale(5),
@@ -600,10 +570,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: scale(12),
   },
-  label: { fontSize: moderateScale(15), color: "#333", fontWeight: "500" },
-  value: { fontSize: moderateScale(15), color: "#666", fontWeight: "400" },
+  label: { fontSize: scaledFont(15), color: "#333", fontWeight: "500" },
+  value: { fontSize: scaledFont(15), color: "#666", fontWeight: "400" },
   valuePhone: {
-    fontSize: moderateScale(14),
+    fontSize: scaledFont(14),
     color: "#1F41BB",
     fontWeight: "600",
     marginTop: verticalScale(2),
@@ -617,13 +587,13 @@ const styles = StyleSheet.create({
   },
   footerLinkText: {
     color: "#1F41BB",
-    fontSize: moderateScale(14),
+    fontSize: scaledFont(14),
     fontWeight: "500",
   },
   footerDot: {
     color: "#CCC",
     marginHorizontal: scale(10),
-    fontSize: moderateScale(16),
+    fontSize: scaledFont(16),
   },
   deleteAccountBtn: {
     paddingVertical: verticalScale(10),
@@ -632,7 +602,7 @@ const styles = StyleSheet.create({
   },
   deleteAccountText: {
     color: "#FF3B30",
-    fontSize: moderateScale(15),
+    fontSize: scaledFont(15),
     fontWeight: "500",
     textDecorationLine: "underline",
   },
@@ -648,7 +618,7 @@ const styles = StyleSheet.create({
   logoutText: {
     marginLeft: scale(8),
     color: "#ffffff",
-    fontSize: moderateScale(16),
+    fontSize: scaledFont(16),
     fontWeight: "600",
   },
   modalOverlay: {
@@ -670,23 +640,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 5,
   },
   modalSubtitle: {
     fontSize: 14,
     color: "#666",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 10,
     lineHeight: 20,
-  },
-  input: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   modalButtons: {
     flexDirection: "row",

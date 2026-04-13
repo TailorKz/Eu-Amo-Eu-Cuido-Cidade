@@ -15,17 +15,16 @@ import {
 import {
     moderateScale,
     scale,
+    scaledFont,
     verticalScale,
 } from "../app/src/utils/responsive";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { useAuthStore } from "./src/store/useAuthStore";
 
-// IMPORTA AS BIBLIOTECAS DE NOTIFICAÇÃO
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 
-// CONFIGURA O COMPORTAMENTO DA NOTIFICAÇÃO QUANDO O APP ESTÁ ABERTO
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -45,15 +44,38 @@ interface Setor {
 const imagensPadrao: Record<string, any> = {
   Infraestrutura: require("../assets/images/infra.png"),
   "Iluminação Pública": require("../assets/images/ilum.png"),
-  Urbanismo: require("../assets/images/urbanismo.png"),
+  "Urbanismo": require("../assets/images/urbanismo.png"),
   "Limpeza Urbana": require("../assets/images/limpeza.png"),
   "Saneamento e água": require("../assets/images/saneamento.png"),
   "Saúde Pública": require("../assets/images/saude.png"),
 };
 
+const formatarNomeSetor = (nome: string) => {
+  if (!nome) return "";
+
+  if (nome === "Saúde Pública" || nome === "Saúde Pública e Vigilância") {
+    return "Saúde Pública\ne Vigilância";
+  }
+
+  if (nome === "Saneamento e água" || nome === "Saneamento e Água") return "Saneamento\ne Água";
+  if (nome === "Iluminação Pública") return "Iluminação\nPública";
+  if (nome === "Limpeza Urbana" || nome === "Limpeza") return "Limpeza\nUrbana";
+
+  // Se for qualquer outro setor com 2 ou mais palavras, quebra no meio
+  const palavras = nome.split(" ");
+  if (palavras.length === 2) {
+    return `${palavras[0]}\n${palavras[1]}`;
+  } else if (palavras.length > 2) {
+    const meio = Math.ceil(palavras.length / 2);
+    return palavras.slice(0, meio).join(" ") + "\n" + palavras.slice(meio).join(" ");
+  }
+
+  // Se for só 1 palavra retorna normal
+  return nome;
+};
+
 export default function Home() {
   const user = useAuthStore((state) => state.user);
-// Pegamos a cidade que o usuário escolheu (ou a cidade do próprio usuário logado)
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
 
   const [modalAvisoVisible, setModalAvisoVisible] = useState(false);
@@ -66,76 +88,56 @@ export default function Home() {
   useEffect(() => {
     verificarAvisosPrefeitura();
     carregarSetores();
-    registrarParaPushNotifications(); //CHAMA A FUNÇÃO AO ABRIR A HOME
+    registrarParaPushNotifications();
   }, []);
 
-  //  GERA O TOKEN E MANDA PRO JAVA
   const registrarParaPushNotifications = async () => {
     if (Device.isDevice) {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
-      // Se ainda não tem permissão, pergunta ao usuário
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
 
-      // Se ele negou, não faz nada
       if (finalStatus !== "granted") {
         console.log("Permissão para notificações negada!");
         return;
       }
 
-      // Se permitiu, gera o Token
       try {
-        // 🔴 1. BUSCA O "RG" DO PROJETO NO APP.JSON
         const projectId =
           Constants.expoConfig?.extra?.eas?.projectId ??
           Constants.easConfig?.projectId;
 
         if (!projectId) {
-          console.log(
-            "⚠️ Project ID não encontrado. Você rodou 'npx eas-cli init'?",
-          );
+          console.log("⚠️ Project ID não encontrado. Você rodou 'npx eas-cli init'?");
           return;
         }
 
-        // 🔴 2. ENVIA O "RG" NA HORA DE PEDIR O TOKEN
         const tokenData = await Notifications.getExpoPushTokenAsync({
           projectId: projectId,
         });
         const token = tokenData.data;
 
-        console.log("Token do celular:", token);
-
-        // Manda o Token pro Java!
         if (user?.id) {
           await axios.put(
             `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/${user.id}/push-token`,
             token,
-            {
-              headers: { "Content-Type": "text/plain" },
-            },
+            { headers: { "Content-Type": "text/plain" } },
           );
-          console.log(" Token salvo no banco de dados com sucesso!");
         }
       } catch (error) {
         console.log(" Erro ao gerar token:", error);
       }
-    } else {
-      console.log(
-        "Aviso: As notificações Push só funcionam num celular físico.",
-      );
     }
   };
 
  const verificarAvisosPrefeitura = async () => {
-    if (!cidadeSelecionada) return; // Segurança extra
+    if (!cidadeSelecionada) return;
 
     try {
-      //  Passamos a cidade na URL
       const response = await axios.get(
         `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeSelecionada}`,
       );
@@ -155,7 +157,6 @@ export default function Home() {
     if (!cidadeSelecionada) return;
 
     try {
-      // Passamos a cidade na URL para buscar só os setores dela
       const response = await axios.get(
         `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeSelecionada}`,
       );
@@ -169,13 +170,11 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      {/* 🔴 O Fundo Fica Fixo */}
       <LinearGradient
         colors={["rgba(2, 154, 255, 0.25)", "transparent"]}
         style={styles.headerGradient}
       />
 
-      {/* 🔴 AQUI ENTRA O SCROLL (Apenas a lista de botões vai rolar) */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -219,12 +218,9 @@ export default function Home() {
                 >
                   <Image source={imageSource} style={styles.cardImage} />
                   <View style={styles.textContainer}>
-                    <Text
-                      style={styles.cardText}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                    >
-                      {item.nome}
+                    <Text style={styles.cardText}>
+                      {/* 🔴 Chama a função que insere a quebra de linha natural */}
+                      {formatarNomeSetor(item.nome)}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -234,7 +230,6 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      {/* 🔴 O Menu Fica de fora do Scroll (Sempre visível em baixo) */}
       <BottomMenu activeRoute="home" />
 
       <Modal visible={modalAvisoVisible} transparent animationType="fade">
@@ -260,16 +255,12 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  // 🔴 O container principal não tem mais o padding.
   container: { flex: 1, backgroundColor: "#F4F7F8" },
-
-  // 🔴 O padding passou para dentro do Scroll (E o bottom é de 100 para não bater no menu)
   scrollContent: {
     paddingHorizontal: scale(16),
     paddingTop: verticalScale(40),
     paddingBottom: verticalScale(120),
   },
-
   headerGradient: {
     position: "absolute",
     top: 0,
@@ -303,30 +294,31 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "48%",
-    height: verticalScale(170),
+    height: verticalScale(180), 
     backgroundColor: "#FFF",
     borderRadius: moderateScale(14),
     alignItems: "center",
-    marginBottom: verticalScale(10),
+    justifyContent: "center",
+    marginBottom: verticalScale(15), 
     elevation: 3,
+    paddingHorizontal: scale(4),
   },
   cardImage: {
-    width: scale(110),
-    height: scale(110),
-    marginTop: verticalScale(10),
-  },
-  cardText: {
-    fontSize: moderateScale(18),
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-    paddingHorizontal: 5,
+    width: scale(105),
+    height: scale(105),
+    marginBottom: verticalScale(12),
   },
   textContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     width: "100%",
+    alignItems: "center",
+
+  },
+  cardText: {
+    fontSize: scaledFont(18),
+    fontWeight: "700", 
+    color: "#333",
+    textAlign: "center",
+    // Removidas as travas que impediam a quebra
   },
 
   modalOverlay: {
