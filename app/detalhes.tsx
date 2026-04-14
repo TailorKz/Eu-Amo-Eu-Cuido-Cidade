@@ -3,7 +3,7 @@ import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +30,7 @@ export default function Detalhes() {
 
   const chamado = params.dados ? JSON.parse(params.dados as string) : null;
   const user = useAuthStore((state) => state.user);
+  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
 
   const origem = params.origem as string;
   const isModoGestao = origem === "setor";
@@ -60,6 +61,7 @@ export default function Detalhes() {
   const [setorSelecionado, setSetorSelecionado] = useState(
     chamado?.categoria || "",
   );
+  const [setoresDaCidade, setSetoresDaCidade] = useState<any[]>([]);
 
   const listaSetores = [
     "Infraestrutura",
@@ -73,6 +75,23 @@ export default function Detalhes() {
   const observacaoY = useRef(0);
   const adminCardY = useRef(0);
   const respostaY = useRef(0);
+
+  useEffect(() => {
+    if (isModoGestao) {
+      carregarSetores();
+    }
+  }, []);
+
+  const carregarSetores = async () => {
+    try {
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeSelecionada}`
+      );
+      setSetoresDaCidade(response.data);
+    } catch (error) {
+      console.log("Erro ao carregar os setores:", error);
+    }
+  };
 
   if (!chamado)
     return (
@@ -701,29 +720,29 @@ export default function Detalhes() {
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {listaSetores.map((setorItem, index) => (
+              {setoresDaCidade.map((setorItem, index) => (
                 <TouchableOpacity
                   key={index}
                   style={[
                     styles.sectorListItem,
-                    setorSelecionado === setorItem &&
+                    setorSelecionado === setorItem.nome &&
                       styles.sectorListItemActive,
                   ]}
                   onPress={() => {
-                    setSetorSelecionado(setorItem);
-                    setIsSetorModalVisible(false);
+                    setSetorSelecionado(setorItem.nome); // Guarda o nome do novo setor
+                    setIsSetorModalVisible(false); // Fecha a modal
                   }}
                 >
                   <Text
                     style={[
                       styles.sectorListText,
-                      setorSelecionado === setorItem &&
+                      setorSelecionado === setorItem.nome &&
                         styles.sectorListTextActive,
                     ]}
                   >
-                    {setorItem}
+                    {setorItem.nome}
                   </Text>
-                  {setorSelecionado === setorItem && (
+                  {setorSelecionado === setorItem.nome && (
                     <Ionicons
                       name="checkmark-circle"
                       size={moderateScale(22)}

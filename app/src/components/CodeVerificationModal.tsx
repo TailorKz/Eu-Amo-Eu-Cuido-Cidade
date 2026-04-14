@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { moderateScale, scale, verticalScale } from "../utils/responsive";
+import { moderateScale, scale, verticalScale, scaledFont } from "../utils/responsive";
 
 type Props = {
   visible: boolean;
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#FFF",
-    fontSize: moderateScale(16),
+    fontSize: scaledFont(18),
     fontWeight: "600",
   },
   resendArea: {
@@ -273,16 +273,16 @@ const styles = StyleSheet.create({
   },
   timerText: {
     color: "#666",
-    fontSize: moderateScale(14),
+    fontSize: scaledFont(15),
   },
   blockedText: {
     color: "#FF3B30",
-    fontSize: moderateScale(14),
+    fontSize: scaledFont(15),
     fontWeight: "600",
   },
   resendText: {
     color: "#1F41BB",
-    fontSize: moderateScale(14),
+    fontSize: scaledFont(15),
     fontWeight: "600",
     textDecorationLine: "underline",
   },
@@ -304,13 +304,13 @@ const styles = StyleSheet.create({
   },
   whatsappText: {
     color: "#128C7E",
-    fontSize: moderateScale(13),
+    fontSize: scaledFont(14),
     fontWeight: "700",
     marginLeft: scale(8),
   },
   cancel: {
     color: "#999",
-    fontSize: moderateScale(15),
+    fontSize: scaledFont(16),
     fontWeight: "500",
   },
 });

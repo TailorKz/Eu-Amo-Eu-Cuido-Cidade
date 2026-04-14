@@ -85,7 +85,7 @@ const secoes: SectionProps[] = [
     titulo: "Seus Direitos (LGPD)",
     icon: "document-text-outline",
     conteudo:
-      "Conforme a LGPD, você possui os seguintes direitos em relação aos seus dados pessoais:\n\n• Acesso: solicitar quais dados possuímos sobre você;\n• Correção: atualizar dados incorretos ou desatualizados;\n• Eliminação: solicitar a exclusão permanente da sua conta e dados;\n• Portabilidade: solicitar seus dados em formato estruturado;\n• Revogação de consentimento: retirar permissões concedidas (GPS, câmera, notificações) a qualquer momento.\n\nPara exercer seus direitos, utilize a opção 'Excluir minha conta' no seu Perfil dentro do aplicativo, ou entre em contato com o nosso número de contato: .",
+      "Conforme a LGPD, você possui os seguintes direitos em relação aos seus dados pessoais:\n\n• Acesso: solicitar quais dados possuímos sobre você;\n• Correção: atualizar dados incorretos ou desatualizados;\n• Eliminação: solicitar a exclusão permanente da sua conta e dados;\n• Portabilidade: solicitar seus dados em formato estruturado;\n• Revogação de consentimento: retirar permissões concedidas (GPS, câmera, notificações) a qualquer momento.\n\nPara exercer seus direitos, utilize a opção 'Excluir minha conta' no seu Perfil dentro do aplicativo, ou entre em contato com o nosso número de contato: +55 49 99164-6337 .",
   },
   {
     numero: "9",
@@ -99,7 +99,7 @@ const secoes: SectionProps[] = [
     titulo: "Contato e Encarregado de Dados",
     icon: "mail-outline",
     conteudo:
-      "Para dúvidas, solicitações ou reclamações relacionadas ao tratamento dos seus dados pessoais, entre em contato através do nosso telefone de contato: , responsável pelo uso e gestão dos dados coletados no âmbito da sua localidade.\n\nO sistema 'Eu Amo, Eu Cuido' é desenvolvido e operado como uma plataforma tecnológica B2G (Business-to-Government) e B2B (Business-to-Business). Desta forma, cada instituição ou órgão contratante (como municípios, corporações ou entidades parceiras) atua como a controladora dos dados dos seus respectivos usuários, nos termos da LGPD.\n\nEsta política pode ser atualizada periodicamente. Alterações relevantes serão comunicadas via notificação no aplicativo.",
+      "Para dúvidas, solicitações ou reclamações relacionadas ao tratamento dos seus dados pessoais, entre em contato através do nosso telefone de contato: +55 49 99164-6337 , responsável pelo uso e gestão dos dados coletados no âmbito da sua localidade.\n\nO sistema 'Eu Amo, Eu Cuido' é desenvolvido e operado como uma plataforma tecnológica B2G (Business-to-Government) e B2B (Business-to-Business). Desta forma, cada instituição ou órgão contratante (como municípios, corporações ou entidades parceiras) atua como a controladora dos dados dos seus respectivos usuários, nos termos da LGPD.\n\nEsta política pode ser atualizada periodicamente. Alterações relevantes serão comunicadas via notificação no aplicativo.",
   },
 ];
 

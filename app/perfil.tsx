@@ -3,23 +3,28 @@ import axios from "axios";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
+import {
+  moderateScale,
+  scale,
+  scaledFont,
+  verticalScale,
+} from "./src/utils/responsive";
 
 export default function Perfil() {
   const user = useAuthStore((state) => state.user);
@@ -29,19 +34,23 @@ export default function Perfil() {
   const [actionType, setActionType] = useState<"phone" | "delete">("phone");
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
 
-  const [isSenhaAtualModalVisible, setIsSenhaAtualModalVisible] = useState(false);
-  const [isNovoNumeroModalVisible, setIsNovoNumeroModalVisible] = useState(false);
+  const [isSenhaAtualModalVisible, setIsSenhaAtualModalVisible] =
+    useState(false);
+  const [isNovoNumeroModalVisible, setIsNovoNumeroModalVisible] =
+    useState(false);
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novoNumero, setNovoNumero] = useState("");
 
-  const [isTrocarSenhaModalVisible, setIsTrocarSenhaModalVisible] = useState(false);
+  const [isTrocarSenhaModalVisible, setIsTrocarSenhaModalVisible] =
+    useState(false);
   const [senhaAtualTroca, setSenhaAtualTroca] = useState("");
   const [novaSenhaTroca, setNovaSenhaTroca] = useState("");
   const [confirmaNovaSenhaTroca, setConfirmaNovaSenhaTroca] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_URL = "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos";
+  const API_URL =
+    "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos";
 
   // ==========================================
   // 1. ALTERAR SENHA (DIRETO NA TELA)
@@ -54,18 +63,31 @@ export default function Perfil() {
   };
 
   const salvarNovaSenha = async () => {
-    if (!senhaAtualTroca) return Alert.alert("Atenção", "Digite sua senha atual.");
-    if (novaSenhaTroca.length < 8) return Alert.alert("Atenção", "A nova senha deve ter pelo menos 8 caracteres.");
-    if (novaSenhaTroca !== confirmaNovaSenhaTroca) return Alert.alert("Atenção", "A nova senha e a confirmação não coincidem.");
+    if (!senhaAtualTroca)
+      return Alert.alert("Atenção", "Digite sua senha atual.");
+    if (novaSenhaTroca.length < 8)
+      return Alert.alert(
+        "Atenção",
+        "A nova senha deve ter pelo menos 8 caracteres.",
+      );
+    if (novaSenhaTroca !== confirmaNovaSenhaTroca)
+      return Alert.alert(
+        "Atenção",
+        "A nova senha e a confirmação não coincidem.",
+      );
 
     setIsLoading(true);
     try {
-      await axios.post(`${API_URL}/${user?.id}/verificar-senha`, senhaAtualTroca, {
-        headers: { "Content-Type": "text/plain" },
-      });
+      await axios.post(
+        `${API_URL}/${user?.id}/verificar-senha`,
+        senhaAtualTroca,
+        {
+          headers: { "Content-Type": "text/plain" },
+        },
+      );
 
       await axios.put(
-        `${API_URL}/${user?.id}/alterar-senha-direta?novaSenha=${novaSenhaTroca}`
+        `${API_URL}/${user?.id}/alterar-senha-direta?novaSenha=${novaSenhaTroca}`,
       );
 
       Alert.alert("Sucesso!", "Sua senha foi alterada com segurança.");
@@ -93,7 +115,8 @@ export default function Perfil() {
   };
 
   const confirmarSenhaAtual = async () => {
-    if (!senhaAtual) return Alert.alert("Atenção", "Digite sua senha para continuar.");
+    if (!senhaAtual)
+      return Alert.alert("Atenção", "Digite sua senha para continuar.");
 
     setIsLoading(true);
     try {
@@ -122,7 +145,8 @@ export default function Perfil() {
   // ==========================================
   const solicitarCodigoNovoNumero = async () => {
     const numeroLimpo = novoNumero.replace(/\D/g, "");
-    if (numeroLimpo.length < 11) return Alert.alert("Atenção", "Digite um celular válido.");
+    if (numeroLimpo.length < 11)
+      return Alert.alert("Atenção", "Digite um celular válido.");
 
     setIsLoading(true);
     try {
@@ -151,8 +175,11 @@ export default function Perfil() {
         const response = await axios.put(
           `${API_URL}/${user?.id}/alterar-numero?codigo=${code}&novoNumero=${numeroLimpo}`,
         );
-        login(response.data); 
-        Alert.alert("Sucesso!", `Seu número foi atualizado para ${novoNumero}.`);
+        login(response.data);
+        Alert.alert(
+          "Sucesso!",
+          `Seu número foi atualizado para ${novoNumero}.`,
+        );
         setNovoNumero("");
       } catch (error) {
         Alert.alert("Erro", "Código inválido.");
@@ -162,8 +189,13 @@ export default function Perfil() {
     } else if (actionType === "delete") {
       setIsLoading(true);
       try {
-        await axios.delete(`${API_URL}/${user?.id}/excluir-conta?codigo=${code}`);
-        Alert.alert("Conta Excluída", "Sua conta e dados foram apagados com sucesso.");
+        await axios.delete(
+          `${API_URL}/${user?.id}/excluir-conta?codigo=${code}`,
+        );
+        Alert.alert(
+          "Conta Excluída",
+          "Sua conta e dados foram apagados com sucesso.",
+        );
         logout();
         router.replace("/");
       } catch (error) {
@@ -179,7 +211,7 @@ export default function Perfil() {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled" 
+        keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.pageTitle}>Meu Perfil</Text>
 
@@ -320,59 +352,72 @@ export default function Perfil() {
       <BottomMenu activeRoute="perfil" />
 
       {/*  MODAL PARA TROCA DIRETA DE SENHA */}
-      <Modal visible={isTrocarSenhaModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
-          <Pressable style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Alterar Senha</Text>
-            <Text style={styles.modalSubtitle}>
-              Digite sua senha atual e a nova senha desejada.
-            </Text>
+      <Modal
+        visible={isTrocarSenhaModalVisible}
+        transparent
+        animationType="slide"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Alterar Senha</Text>
+                <Text style={styles.modalSubtitle}>
+                  Digite sua senha atual e a nova senha desejada.
+                </Text>
 
-            <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
-              <Input
-                placeholder="Senha atual"
-                icon="key-outline"
-                secureTextEntry
-                value={senhaAtualTroca}
-                onChangeText={setSenhaAtualTroca}
-              />
-              <Input
-                placeholder="Nova senha (min. 8)"
-                icon="lock-closed-outline"
-                secureTextEntry
-                value={novaSenhaTroca}
-                onChangeText={setNovaSenhaTroca}
-              />
-              <Input
-                placeholder="Confirme nova senha"
-                icon="checkmark-circle-outline"
-                secureTextEntry
-                value={confirmaNovaSenhaTroca}
-                onChangeText={setConfirmaNovaSenhaTroca}
-              />
-            </View>
+                <View
+                  style={{ width: "110%", alignSelf: "center", marginTop: 10 }}
+                >
+                  <Input
+                    placeholder="Senha atual"
+                    icon="key-outline"
+                    secureTextEntry
+                    value={senhaAtualTroca}
+                    onChangeText={setSenhaAtualTroca}
+                  />
+                  <Input
+                    placeholder="Nova senha (min. 8)"
+                    icon="lock-closed-outline"
+                    secureTextEntry
+                    value={novaSenhaTroca}
+                    onChangeText={setNovaSenhaTroca}
+                  />
+                  <Input
+                    placeholder="Confirme nova senha"
+                    icon="checkmark-circle-outline"
+                    secureTextEntry
+                    value={confirmaNovaSenhaTroca}
+                    onChangeText={setConfirmaNovaSenhaTroca}
+                  />
+                </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.btnCancel}
-                onPress={() => setIsTrocarSenhaModalVisible(false)}
-              >
-                <Text style={styles.btnCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.btnConfirm}
-                onPress={salvarNovaSenha}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.btnConfirmText}>Salvar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.btnCancel}
+                    onPress={() => setIsTrocarSenhaModalVisible(false)}
+                  >
+                    <Text style={styles.btnCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.btnConfirm}
+                    onPress={salvarNovaSenha}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <Text style={styles.btnConfirmText}>Salvar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <CodeVerificationModal
@@ -387,101 +432,159 @@ export default function Perfil() {
       />
 
       {/*  MODAL DE SENHA ATUAL */}
-      <Modal visible={isSenhaAtualModalVisible} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
-          <Pressable style={styles.modalContent}>
-            <Ionicons
-              name={actionType === "delete" ? "warning" : "shield-checkmark"}
-              size={40}
-              color={actionType === "delete" ? "#FF3B30" : "#1F41BB"}
-              style={{ alignSelf: "center", marginBottom: 10 }}
-            />
-            <Text style={styles.modalTitle}>Confirme sua Identidade</Text>
-            <Text style={styles.modalSubtitle}>
-              {actionType === "delete"
-                ? "Para EXCLUIR sua conta permanentemente, digite sua senha atual."
-                : "Para alterar o número, digite sua senha atual."}
-            </Text>
+      <Modal
+        visible={isSenhaAtualModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
+              <View style={styles.modalContent}>
+                <Ionicons
+                  name={
+                    actionType === "delete" ? "warning" : "shield-checkmark"
+                  }
+                  size={40}
+                  color={actionType === "delete" ? "#FF3B30" : "#1F41BB"}
+                  style={{ alignSelf: "center", marginBottom: 10 }}
+                />
+                <Text style={styles.modalTitle}>Confirme sua Identidade</Text>
+                <Text style={styles.modalSubtitle}>
+                  {actionType === "delete"
+                    ? "Para EXCLUIR sua conta permanentemente, digite sua senha atual."
+                    : "Para alterar o número, digite sua senha atual."}
+                </Text>
 
-            <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
-              <Input
-                placeholder="Digite sua senha atual"
-                icon="lock-closed-outline"
-                secureTextEntry
-                value={senhaAtual}
-                onChangeText={setSenhaAtual}
-              />
-            </View>
+                <View
+                  style={{ width: "110%", alignSelf: "center", marginTop: 10 }}
+                >
+                  <Input
+                    placeholder="Digite sua senha atual"
+                    icon="lock-closed-outline"
+                    secureTextEntry
+                    value={senhaAtual}
+                    onChangeText={setSenhaAtual}
+                  />
+                </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.btnCancel}
-                onPress={() => setIsSenhaAtualModalVisible(false)}
-              >
-                <Text style={styles.btnCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.btnConfirm,
-                  actionType === "delete" && { backgroundColor: "#FF3B30" },
-                ]}
-                onPress={confirmarSenhaAtual}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.btnConfirmText}>Avançar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.btnCancel}
+                    onPress={() => setIsSenhaAtualModalVisible(false)}
+                  >
+                    <Text style={styles.btnCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.btnConfirm,
+                      actionType === "delete" && { backgroundColor: "#FF3B30" },
+                    ]}
+                    onPress={confirmarSenhaAtual}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <Text style={styles.btnConfirmText}>Avançar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
+      <CodeVerificationModal
+        visible={isCodeModalVisible}
+        onClose={() => setIsCodeModalVisible(false)}
+        onConfirm={handleCodeConfirm}
+        // Se estiver a trocar de número, reenvia chamando o método de novo número. Se for apagar conta, refaz a confirmação (que manda o SMS).
+        onResend={
+          actionType === "phone"
+            ? solicitarCodigoNovoNumero
+            : confirmarSenhaAtual
+        }
+        description={
+          actionType === "phone"
+            ? `Enviamos um SMS para o número: ${novoNumero}`
+            : `Enviamos um SMS para o seu número ${user?.telefone}`
+        }
+      />
+
       {/*  MODAL DE NOVO NÚMERO */}
-      <Modal visible={isNovoNumeroModalVisible} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
-          <Pressable style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Novo Número</Text>
-            <Text style={styles.modalSubtitle}>
-              Enviaremos um SMS para este novo número:
-            </Text>
+      <Modal
+        visible={isNovoNumeroModalVisible}
+        transparent
+        animationType="slide"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Novo Número</Text>
+                <Text style={styles.modalSubtitle}>
+                  Enviaremos um SMS para este novo número:
+                </Text>
 
-            <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
-              <Input
-                placeholder="(00) 00000-0000"
-                icon="logo-whatsapp"
-                keyboardType="numeric"
-                value={novoNumero}
-                onChangeText={(masked) => setNovoNumero(masked || "")}
-                mask={[
-                  "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
-                ]}
-              />
-            </View>
+                <View
+                  style={{ width: "110%", alignSelf: "center", marginTop: 10 }}
+                >
+                  <Input
+                    placeholder="(00) 00000-0000"
+                    icon="call-outline"
+                    keyboardType="numeric"
+                    value={novoNumero}
+                    onChangeText={(masked) => setNovoNumero(masked || "")}
+                    mask={[
+                      "(",
+                      /\d/,
+                      /\d/,
+                      ")",
+                      /\d/,
+                      /\d/,
+                      /\d/,
+                      /\d/,
+                      /\d/,
+                      "-",
+                      /\d/,
+                      /\d/,
+                      /\d/,
+                      /\d/,
+                    ]}
+                  />
+                </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.btnCancel}
-                onPress={() => setIsNovoNumeroModalVisible(false)}
-              >
-                <Text style={styles.btnCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.btnConfirm}
-                onPress={solicitarCodigoNovoNumero}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.btnConfirmText}>Avançar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.btnCancel}
+                    onPress={() => setIsNovoNumeroModalVisible(false)}
+                  >
+                    <Text style={styles.btnCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.btnConfirm}
+                    onPress={solicitarCodigoNovoNumero}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <Text style={styles.btnConfirmText}>Avançar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

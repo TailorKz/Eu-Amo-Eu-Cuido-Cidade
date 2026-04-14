@@ -10,19 +10,16 @@ import {
   Modal,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Pressable,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import MaskInput from "react-native-mask-input";
 import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, verticalScale, scale, scaledFont } from "./src/utils/responsive";
 import { cityAssets } from "./src/utils/cityAssets";
+import { moderateScale, verticalScale } from "./src/utils/responsive";
 
 export default function Login() {
   const router = useRouter();
@@ -33,7 +30,9 @@ export default function Login() {
     cityAssets[cidadeSelecionada || "Iporã do Oeste"] ||
     cityAssets["Iporã do Oeste"];
 
-  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(null);
+  const [fundoPersonalizado, setFundoPersonalizado] = useState<string | null>(
+    null,
+  );
 
   const [phone, setPhone] = useState("");
   const [phoneRaw, setPhoneRaw] = useState("");
@@ -44,11 +43,11 @@ export default function Login() {
 
   const [isForgotModalVisible, setIsForgotModalVisible] = useState(false);
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
-  const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] = useState(false);
-  
+  const [isNewPasswordModalVisible, setIsNewPasswordModalVisible] =
+    useState(false);
+
   const [forgotPhone, setForgotPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  
 
   const [codigoRecuperacao, setCodigoRecuperacao] = useState("");
 
@@ -97,7 +96,8 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
-      const url = "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
+      const url =
+        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login";
       const dadosDeLogin = {
         telefone: phoneRaw,
         senha: password,
@@ -135,13 +135,16 @@ export default function Login() {
     setIsLoading(true);
     try {
       await axios.post(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/solicitar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/solicitar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}`,
       );
-      
+
       setIsForgotModalVisible(false);
       setTimeout(() => setIsCodeModalVisible(true), 500);
     } catch (error) {
-      Alert.alert("Erro", "Não encontramos uma conta com este número na sua cidade.");
+      Alert.alert(
+        "Erro",
+        "Não encontramos uma conta com este número na sua cidade.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -152,18 +155,17 @@ export default function Login() {
     setIsLoading(true);
     try {
       const numeroLimpo = forgotPhone.replace(/\D/g, "");
-      
+
       // Bate no Java para perguntar se o código que o cidadão digitou está certo
       await axios.post(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/validar-codigo?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${code}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/validar-codigo?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${code}`,
       );
-      
+
       // Se o Java responder OK, avança!
-      setCodigoRecuperacao(code); 
-      setNewPassword(""); 
+      setCodigoRecuperacao(code);
+      setNewPassword("");
       setIsCodeModalVisible(false);
       setTimeout(() => setIsNewPasswordModalVisible(true), 500);
-      
     } catch (error) {
       // Se o Java devolver erro 401 (Código inválido), barra na hora!
       Alert.alert("Erro", "O código digitado está incorreto ou expirou.");
@@ -182,16 +184,19 @@ export default function Login() {
     setIsLoading(true);
     try {
       const numeroLimpo = forgotPhone.replace(/\D/g, "");
-      
+
       await axios.put(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/alterar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${codigoRecuperacao}&novaSenha=${newPassword}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/alterar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${codigoRecuperacao}&novaSenha=${newPassword}`,
       );
-      
-      Alert.alert("Sucesso!", "Sua senha foi redefinida. Faça o login para continuar.");
+
+      Alert.alert(
+        "Sucesso!",
+        "Sua senha foi redefinida. Faça o login para continuar.",
+      );
       setIsNewPasswordModalVisible(false);
       setNewPassword("");
       setForgotPhone("");
-      setCodigoRecuperacao(""); 
+      setCodigoRecuperacao("");
     } catch (error) {
       Alert.alert("Erro", "Ocorreu um erro ao redefinir a senha.");
     } finally {
@@ -304,11 +309,13 @@ export default function Login() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.btnSecondary} 
+            <TouchableOpacity
+              style={styles.btnSecondary}
               onPress={() => router.push("/cadastro")}
             >
-              <Text style={styles.btnSecondaryText}>Quer criar uma conta? Clique aqui</Text>
+              <Text style={styles.btnSecondaryText}>
+                Quer criar uma conta? Clique aqui
+              </Text>
             </TouchableOpacity>
           </KeyboardAwareScrollView>
 
@@ -323,54 +330,86 @@ export default function Login() {
             transparent
             animationType="slide"
           >
-            <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
-              <Pressable style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Recuperar Senha</Text>
-                <Text style={styles.modalSubtitle}>
-                  Digite o número cadastrado. Enviaremos um código via SMS.
-                </Text>
-                
-                <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
-                  <Input
-                    placeholder="(00) 00000-0000"
-                    icon="phone-portrait-outline"
-                    keyboardType="numeric"
-                    value={forgotPhone}
-                    onChangeText={(masked) => setForgotPhone(masked || "")}
-                    mask={[
-                      "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
-                    ]}
-                  />
-                </View>
-                
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.btnCancel}
-                    onPress={() => setIsForgotModalVisible(false)}
-                  >
-                    <Text style={styles.btnCancelText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.btnConfirm}
-                    onPress={handleRequestPasswordReset}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <Text style={styles.btnConfirmText}>Enviar</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
-            </Pressable>
+            {/* Clique no fundo cinza fecha o teclado */}
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
+              <View style={styles.modalOverlay}>
+                {/* Clique no cartão branco também fecha o teclado */}
+                <TouchableWithoutFeedback
+                  onPress={Keyboard.dismiss}
+                  accessible={false}
+                >
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Recuperar Senha</Text>
+                    <Text style={styles.modalSubtitle}>
+                      Digite o número cadastrado. Enviaremos um código via SMS.
+                    </Text>
+
+                    <View
+                      style={{
+                        width: "110%",
+                        alignSelf: "center",
+                        marginTop: 10,
+                      }}
+                    >
+                      <Input
+                        placeholder="(00) 00000-0000"
+                        icon="call-outline"
+                        keyboardType="numeric"
+                        value={forgotPhone}
+                        onChangeText={(masked) => setForgotPhone(masked || "")}
+                        mask={[
+                          "(",
+                          /\d/,
+                          /\d/,
+                          ")",
+                          /\d/,
+                          /\d/,
+                          /\d/,
+                          /\d/,
+                          /\d/,
+                          "-",
+                          /\d/,
+                          /\d/,
+                          /\d/,
+                          /\d/,
+                        ]}
+                      />
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={styles.btnCancel}
+                        onPress={() => setIsForgotModalVisible(false)}
+                      >
+                        <Text style={styles.btnCancelText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.btnConfirm}
+                        onPress={handleRequestPasswordReset}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <ActivityIndicator color="#FFF" />
+                        ) : (
+                          <Text style={styles.btnConfirmText}>Enviar</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
           </Modal>
 
           <CodeVerificationModal
             visible={isCodeModalVisible}
             onClose={() => setIsCodeModalVisible(false)}
             onConfirm={handleCodeConfirm}
-            onResend={handleIniciarCadastro}
+            // Chama a função certa de recuperar senha desta tela
+            onResend={handleRequestPasswordReset}
             description={`Enviamos um SMS com o código para o número: ${forgotPhone}`}
           />
 
@@ -379,44 +418,62 @@ export default function Login() {
             transparent
             animationType="slide"
           >
-            <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
-              <Pressable style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Criar Nova Senha</Text>
-                <Text style={styles.modalSubtitle}>
-                  O código foi validado! Digite sua nova senha de acesso.
-                </Text>
-                
-                <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
-                  <Input
-                    placeholder="Nova senha (min. 8)"
-                    icon="lock-open-outline"
-                    secureTextEntry
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                  />
-                </View>
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
+              <View style={styles.modalOverlay}>
+                <TouchableWithoutFeedback
+                  onPress={Keyboard.dismiss}
+                  accessible={false}
+                >
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Criar Nova Senha</Text>
+                    <Text style={styles.modalSubtitle}>
+                      O código foi validado! Digite sua nova senha.
+                    </Text>
 
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.btnCancel}
-                    onPress={() => setIsNewPasswordModalVisible(false)}
-                  >
-                    <Text style={styles.btnCancelText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.btnConfirm}
-                    onPress={saveRecoveredPassword}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <Text style={styles.btnConfirmText}>Salvar Senha</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
-            </Pressable>
+                    <View
+                      style={{
+                        width: "110%",
+                        alignSelf: "center",
+                        marginTop: 10,
+                      }}
+                    >
+                      <Input
+                        placeholder="Nova senha (min. 8)"
+                        icon="lock-open-outline"
+                        secureTextEntry
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                      />
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={styles.btnCancel}
+                        onPress={() => setIsNewPasswordModalVisible(false)}
+                      >
+                        <Text style={styles.btnCancelText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.btnConfirm}
+                        onPress={saveRecoveredPassword}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <ActivityIndicator color="#FFF" />
+                        ) : (
+                          <Text style={styles.btnConfirmText}>
+                            Salvar Senha
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
           </Modal>
         </View>
       </TouchableWithoutFeedback>
@@ -483,12 +540,11 @@ const styles = StyleSheet.create({
   btnSecondary: {
     marginTop: verticalScale(15),
     alignSelf: "center",
-    
+
     marginBottom: verticalScale(20),
     backgroundColor: "#edededa7",
     paddingHorizontal: moderateScale(10),
     borderRadius: moderateScale(10),
-    
   },
   btnSecondaryText: {
     color: "#39555c",
