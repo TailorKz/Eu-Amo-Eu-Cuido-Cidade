@@ -62,7 +62,7 @@ export const Select = forwardRef<SelectRef, Props>(({
     setSelected(value);
     setOpen(false);
     onSelect?.(value);
-    onClose?.(); // 🔴 Avisa que fechou ao selecionar uma opção
+    onClose?.(); //  Avisa que fechou ao selecionar uma opção
   }
 
   function handleOpen() {
@@ -72,7 +72,7 @@ export const Select = forwardRef<SelectRef, Props>(({
     if (novoEstado) {
       onOpen?.();
     } else {
-      onClose?.(); // 🔴 Avisa que fechou ao clicar na setinha
+      onClose?.(); //  Avisa que fechou ao clicar na setinha
     }
   }
 
@@ -83,7 +83,7 @@ export const Select = forwardRef<SelectRef, Props>(({
           style={StyleSheet.absoluteFill}
           onPress={() => {
             setOpen(false);
-            onClose?.(); // 🔴 Avisa que fechou ao clicar fora do componente
+            onClose?.(); // Avisa que fechou ao clicar fora do componente
           }}
         />
       )}

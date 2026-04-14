@@ -13,7 +13,7 @@ export function BottomMenu({ activeRoute }: Props) {
   const insets = useSafeAreaInsets();
   const safeBottomPadding = insets.bottom > 0 ? insets.bottom : verticalScale(10);
 
-  // 🔴 FUNÇÃO NOVA: Só navega se a pessoa estiver numa aba diferente!
+  // Só navega se a pessoa estiver numa aba diferente
   const handleNavigation = (route: "home" | "reportos" | "perfil", path: any) => {
     if (activeRoute !== route) {
       router.replace(path);
@@ -32,7 +32,7 @@ export function BottomMenu({ activeRoute }: Props) {
     >
       <TouchableOpacity
         style={styles.menuItem}
-        // 🔴 Tira o efeito de clique se já estiver na aba!
+        // Tira o efeito de clique se já estiver na aba!
         activeOpacity={activeRoute === "home" ? 1 : 0.2} 
         onPress={() => handleNavigation("home", "/home")}
       >

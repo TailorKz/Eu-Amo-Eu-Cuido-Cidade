@@ -319,7 +319,7 @@ export default function Perfil() {
 
       <BottomMenu activeRoute="perfil" />
 
-      {/* 🔴 MODAL PARA TROCA DIRETA DE SENHA */}
+      {/*  MODAL PARA TROCA DIRETA DE SENHA */}
       <Modal visible={isTrocarSenhaModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
           <Pressable style={styles.modalContent}>
@@ -381,12 +381,12 @@ export default function Perfil() {
         onConfirm={handleCodeConfirm}
         description={
           actionType === "phone"
-            ? `Enviamos um código no Whatsapp do número: ${novoNumero}`
-            : `Enviamos um código no Whatsapp do seu número ${user?.telefone}`
+            ? `Enviamos um código SMS para o número: ${novoNumero}`
+            : `Enviamos um código SMS para o seu número: ${user?.telefone}`
         }
       />
 
-      {/* 🔴 MODAL DE SENHA ATUAL */}
+      {/*  MODAL DE SENHA ATUAL */}
       <Modal visible={isSenhaAtualModalVisible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
           <Pressable style={styles.modalContent}>
@@ -439,13 +439,13 @@ export default function Perfil() {
         </Pressable>
       </Modal>
 
-      {/* 🔴 MODAL DE NOVO NÚMERO */}
+      {/*  MODAL DE NOVO NÚMERO */}
       <Modal visible={isNovoNumeroModalVisible} transparent animationType="slide">
         <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
           <Pressable style={styles.modalContent}>
             <Text style={styles.modalTitle}>Novo Número</Text>
             <Text style={styles.modalSubtitle}>
-              Enviaremos um SMS no seu Whatsapp para este novo número:
+              Enviaremos um SMS para este novo número:
             </Text>
 
             <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>

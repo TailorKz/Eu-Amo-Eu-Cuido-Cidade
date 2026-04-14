@@ -21,7 +21,6 @@ type Props = Omit<TextInputProps, "onChangeText"> & {
 export function Input(props: Props) {
   const { icon, mask, error, onChangeText, ...rest } = props;
   
-  // Estado para controlar o olhinho da senha
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   return (
@@ -37,6 +36,7 @@ export function Input(props: Props) {
         {mask ? (
           <MaskInput
             {...rest}
+            mask={mask}
             style={styles.input}
             placeholderTextColor="#999"
             onChangeText={(masked, unmasked) => {
@@ -46,7 +46,6 @@ export function Input(props: Props) {
         ) : (
           <TextInput
             {...rest}
-            //  Desativa a segurança se o olhinho estiver ativo
             secureTextEntry={rest.secureTextEntry && !isPasswordVisible}
             style={styles.input}
             placeholderTextColor="#999"
@@ -56,7 +55,6 @@ export function Input(props: Props) {
           />
         )}
 
-        {/* Se for senha, mostra o olhinho. Se não, mostra o ícone normal */}
         {rest.secureTextEntry ? (
           <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
             <Ionicons
@@ -73,7 +71,6 @@ export function Input(props: Props) {
   );
 }
 
-
 const styles = StyleSheet.create({
   wrapper: {
     width: "90%",
@@ -81,36 +78,27 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(15),
     position: "relative",
   },
-
   container: {
     height: moderateScale(60),
     backgroundColor: "#EDEDED",
     borderRadius: moderateScale(10),
     borderWidth: 0.5,
     borderColor: "#B0B0B0",
-
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-
     paddingHorizontal: scale(16),
-
-    // sombra iOS
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-
-    // sombra Android
     elevation: 2,
   },
-
   input: {
     flex: 1,
     fontSize: moderateScale(16),
     color: "#333",
   },
-
   errorContainer: {
     position: "absolute",
     top: -35,
@@ -121,14 +109,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     zIndex: 10,
   },
-
   errorText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "500",
   },
-
-  // 🔻 SETINHA
   errorArrow: {
     position: "absolute",
     bottom: -6,

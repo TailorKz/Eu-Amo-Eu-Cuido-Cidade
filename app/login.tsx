@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  Pressable,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import MaskInput from "react-native-mask-input";
@@ -48,7 +49,7 @@ export default function Login() {
   const [forgotPhone, setForgotPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
   
-  // Estado para guardar o código de 4 dígitos digitado pelo usuário
+
   const [codigoRecuperacao, setCodigoRecuperacao] = useState("");
 
   const [errors, setErrors] = useState({ phone: "", password: "" });
@@ -119,7 +120,7 @@ export default function Login() {
     }
   }
 
-  // 🔴 1. SOLICITA O CÓDIGO
+  // SOLICITA O CÓDIGO
   const handleRequestPasswordReset = async () => {
     const numeroLimpo = forgotPhone.replace(/\D/g, "");
     if (numeroLimpo.length < 11) {
@@ -146,15 +147,32 @@ export default function Login() {
     }
   };
 
-  // 🔴 2. GUARDA O CÓDIGO VALIDADO
-  const handleCodeConfirm = (code: string) => {
-    setCodigoRecuperacao(code); // Salva o código na memória
-    setNewPassword(""); // Limpa o campo de senha
-    setIsCodeModalVisible(false);
-    setTimeout(() => setIsNewPasswordModalVisible(true), 500);
+  // VALIDA O CÓDIGO NA HORA (NOVA TRAVA DE SEGURANÇA)
+  const handleCodeConfirm = async (code: string) => {
+    setIsLoading(true);
+    try {
+      const numeroLimpo = forgotPhone.replace(/\D/g, "");
+      
+      // Bate no Java para perguntar se o código que o cidadão digitou está certo
+      await axios.post(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/validar-codigo?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${code}`
+      );
+      
+      // Se o Java responder OK, avança!
+      setCodigoRecuperacao(code); 
+      setNewPassword(""); 
+      setIsCodeModalVisible(false);
+      setTimeout(() => setIsNewPasswordModalVisible(true), 500);
+      
+    } catch (error) {
+      // Se o Java devolver erro 401 (Código inválido), barra na hora!
+      Alert.alert("Erro", "O código digitado está incorreto ou expirou.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // 🔴 3. ENVIA A NOVA SENHA E O CÓDIGO
+  // ENVIA A NOVA SENHA E O CÓDIGO
   const saveRecoveredPassword = async () => {
     if (newPassword.length < 8) {
       Alert.alert("Atenção", "A senha deve ter pelo menos 8 caracteres.");
@@ -173,13 +191,17 @@ export default function Login() {
       setIsNewPasswordModalVisible(false);
       setNewPassword("");
       setForgotPhone("");
-      setCodigoRecuperacao(""); // Limpa o código da memória
+      setCodigoRecuperacao(""); 
     } catch (error) {
-      Alert.alert("Erro", "O código digitado está incorreto ou expirou.");
+      Alert.alert("Erro", "Ocorreu um erro ao redefinir a senha.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  function handleIniciarCadastro(): void {
+    throw new Error("Function not implemented.");
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -230,7 +252,7 @@ export default function Login() {
 
             <Input
               placeholder="Número:"
-              icon="logo-whatsapp"
+              icon="call-outline"
               value={phone}
               keyboardType="numeric"
               error={errors.phone}
@@ -238,8 +260,23 @@ export default function Login() {
                 setPhone(masked);
                 setPhoneRaw(unmasked || "");
               }}
+              // <-- Máscara nova: (xx)xxxxx-xxxx (sem o espaço)
               mask={[
-                "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
+                "(",
+                /\d/,
+                /\d/,
+                ")",
+                " ",
+                /\d/,
+                /\d/,
+                /\d/,
+                /\d/,
+                /\d/,
+                "-",
+                /\d/,
+                /\d/,
+                /\d/,
+                /\d/,
               ]}
             />
             <Input
@@ -286,22 +323,26 @@ export default function Login() {
             transparent
             animationType="slide"
           >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+            <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
+              <Pressable style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Recuperar Senha</Text>
                 <Text style={styles.modalSubtitle}>
-                  Digite o número cadastrado. Enviaremos um código via WhatsApp.
+                  Digite o número cadastrado. Enviaremos um código via SMS.
                 </Text>
-                <MaskInput
-                  style={styles.modalInput}
-                  placeholder="(00) 00000-0000"
-                  keyboardType="numeric"
-                  value={forgotPhone}
-                  onChangeText={(masked) => setForgotPhone(masked)}
-                  mask={[
-                    "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
-                  ]}
-                />
+                
+                <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
+                  <Input
+                    placeholder="(00) 00000-0000"
+                    icon="phone-portrait-outline"
+                    keyboardType="numeric"
+                    value={forgotPhone}
+                    onChangeText={(masked) => setForgotPhone(masked || "")}
+                    mask={[
+                      "(", /\d/, /\d/, ")", " ", /\d/, /\d/, /\d/, /\d/, /\d/, "-", /\d/, /\d/, /\d/, /\d/,
+                    ]}
+                  />
+                </View>
+                
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={styles.btnCancel}
@@ -321,15 +362,16 @@ export default function Login() {
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
-            </View>
+              </Pressable>
+            </Pressable>
           </Modal>
 
           <CodeVerificationModal
             visible={isCodeModalVisible}
             onClose={() => setIsCodeModalVisible(false)}
             onConfirm={handleCodeConfirm}
-            description={`Enviamos um código no Whatsapp do número: ${forgotPhone}`}
+            onResend={handleIniciarCadastro}
+            description={`Enviamos um SMS com o código para o número: ${forgotPhone}`}
           />
 
           <Modal
@@ -337,19 +379,23 @@ export default function Login() {
             transparent
             animationType="slide"
           >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+            <Pressable style={styles.modalOverlay} onPress={Keyboard.dismiss}>
+              <Pressable style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Criar Nova Senha</Text>
                 <Text style={styles.modalSubtitle}>
                   O código foi validado! Digite sua nova senha de acesso.
                 </Text>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="Nova senha (min. 8 caracteres)"
-                  secureTextEntry
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                />
+                
+                <View style={{ width: "110%", alignSelf: "center", marginTop: 10 }}>
+                  <Input
+                    placeholder="Nova senha (min. 8)"
+                    icon="lock-open-outline"
+                    secureTextEntry
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                  />
+                </View>
+
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={styles.btnCancel}
@@ -369,8 +415,8 @@ export default function Login() {
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
-            </View>
+              </Pressable>
+            </Pressable>
           </Modal>
         </View>
       </TouchableWithoutFeedback>
@@ -437,18 +483,17 @@ const styles = StyleSheet.create({
   btnSecondary: {
     marginTop: verticalScale(15),
     alignSelf: "center",
-    paddingVertical: verticalScale(12),
-    paddingHorizontal: scale(20),
-    borderRadius: moderateScale(10),
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    borderWidth: 1,
-    borderColor: "#1F41BB",
+    
     marginBottom: verticalScale(20),
+    backgroundColor: "#edededa7",
+    paddingHorizontal: moderateScale(10),
+    borderRadius: moderateScale(10),
+    
   },
   btnSecondaryText: {
-    color: "#1F41BB",
+    color: "#39555c",
     fontSize: moderateScale(15),
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
   },
   footerImageContainer: {
@@ -501,15 +546,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
     lineHeight: 20,
-  },
-  modalInput: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   modalButtons: {
     flexDirection: "row",

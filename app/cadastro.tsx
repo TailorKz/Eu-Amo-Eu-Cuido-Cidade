@@ -14,11 +14,11 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { CodeVerificationModal } from "./src/components/CodeVerificationModal"; // 🔴 IMPORTADO
+import { CodeVerificationModal } from "./src/components/CodeVerificationModal"; 
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { cityAssets } from "./src/utils/cityAssets";
-import { moderateScale, verticalScale } from "./src/utils/responsive";
+import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
 
 export default function Cadastro() {
   const router = useRouter();
@@ -40,7 +40,6 @@ export default function Cadastro() {
     null,
   );
 
-  // 🔴 NOVOS ESTADOS PARA A VALIDAÇÃO WHATSAPP
   const [isCodeModalVisible, setIsCodeModalVisible] = useState(false);
   const [codigoGeradoBackend, setCodigoGeradoBackend] = useState("");
 
@@ -85,7 +84,7 @@ export default function Cadastro() {
     return !newErrors.nome && !newErrors.phone && !newErrors.password;
   }
 
-  // 🔴 PASSO 1: INICIA O CADASTRO E SOLICITA O WHATSAPP
+  // 🔴 PASSO 1: INICIA O CADASTRO E SOLICITA O SMS
   async function handleIniciarCadastro() {
     if (!validate()) return;
     if (!cidadeSelecionada) {
@@ -98,20 +97,16 @@ export default function Cadastro() {
 
     setIsLoading(true);
     try {
-      // Como o usuário ainda não existe, para evitar criar lixo no banco,
-      // o ideal seria uma rota Java que só dispara o SMS.
-      // (Adapte a URL abaixo caso você crie uma rota específica no Java para gerar OTP sem salvar o cidadão)
-
-      /* Exemplo se tiver a rota:
+      // Faz o pedido para o Java gerar e enviar o SMS
       const response = await axios.post(`https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/enviar-otp-cadastro?telefone=${phoneRaw}`);
-      setCodigoGeradoBackend(response.data.codigo); // Guarda o código que o Java gerou
-      */
-
-      // Por enquanto, simulamos a abertura da modal (Remova isso quando conectar a rota)
+      
+      // Guarda o código secreto na memória do celular
+      setCodigoGeradoBackend(String(response.data.codigo)); 
+      
       setIsCodeModalVisible(true);
     } catch (error: any) {
       console.log(error);
-      Alert.alert("Erro", "Não foi possível enviar o código.");
+      Alert.alert("Erro", "Não foi possível enviar o código SMS.");
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +114,12 @@ export default function Cadastro() {
 
   // 🔴 PASSO 2: CONFIRMA O CÓDIGO E CRIA A CONTA
   async function handleConfirmarCodigo(codeDigitado: string) {
-    // Se você tiver a rota Java, verifique: if (codeDigitado !== codigoGeradoBackend) return Alert("Erro");
+    
+    // 🔴 A TRAVA DE SEGURANÇA: Bloqueia imediatamente se não bater com o SMS!
+    if (codeDigitado !== codigoGeradoBackend) {
+      Alert.alert("Atenção", "O código digitado está incorreto.");
+      return; // Este return impede que a execução continue e crie a conta!
+    }
 
     setIsCodeModalVisible(false);
     setIsLoading(true);
@@ -215,7 +215,7 @@ export default function Cadastro() {
 
             <Input
               placeholder="Número:"
-              icon="logo-whatsapp"
+              icon="call-outline"
               value={phone}
               keyboardType="numeric"
               error={errors.phone}
@@ -258,7 +258,6 @@ export default function Cadastro() {
               onChangeText={(text) => setConfirmPassword(text)}
             />
 
-            {/* 🔴 CHAMA O PASSO 1 */}
             <TouchableOpacity
               style={styles.button}
               onPress={handleIniciarCadastro}
@@ -285,12 +284,12 @@ export default function Cadastro() {
             </View>
           )}
 
-          {/*  MODAL PARA DIGITAR O CÓDIGO DO WHATSAPP */}
           <CodeVerificationModal
             visible={isCodeModalVisible}
             onClose={() => setIsCodeModalVisible(false)}
             onConfirm={handleConfirmarCodigo}
-            description={`Enviamos um código no Whatsapp do número: ${phone}`}
+            onResend={handleIniciarCadastro}
+            description={`Enviamos um SMS com o código para o número: ${phone}`}
           />
         </View>
       </TouchableWithoutFeedback>
