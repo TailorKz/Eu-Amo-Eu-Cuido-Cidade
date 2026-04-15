@@ -22,7 +22,12 @@ import ImageView from "react-native-image-viewing";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Select } from "./src/components/Select";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
+import {
+  moderateScale,
+  scale,
+  scaledFont,
+  verticalScale,
+} from "./src/utils/responsive";
 
 export default function Detalhes() {
   const router = useRouter();
@@ -30,7 +35,8 @@ export default function Detalhes() {
 
   const chamado = params.dados ? JSON.parse(params.dados as string) : null;
   const user = useAuthStore((state) => state.user);
-  const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
+  const cidadeSelecionada =
+    useAuthStore((state) => state.cidadeSelecionada) || user?.cidade;
 
   const origem = params.origem as string;
   const isModoGestao = origem === "setor";
@@ -85,7 +91,7 @@ export default function Detalhes() {
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeSelecionada}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeSelecionada}`,
       );
       setSetoresDaCidade(response.data);
     } catch (error) {
@@ -139,7 +145,7 @@ export default function Detalhes() {
             Alert.alert("Excluído", "Solicitação removida.");
             router.replace("/reportos");
           } catch (error) {
-            Alert.alert("Erro", "Não foi possível excluir.");
+            Alert.alert("Erro", "Não foi possível excluir. Tente novamente.");
           }
         },
       },
@@ -646,47 +652,27 @@ export default function Detalhes() {
               <View style={styles.actionButtons}>
                 {isEditing ? (
                   <>
-                    <TouchableOpacity
-                      style={styles.saveBtn}
-                      onPress={handleSalvarEdicao}
-                    >
+                    <TouchableOpacity style={styles.saveBtn} onPress={handleSalvarEdicao}>
                       <Text style={styles.saveBtnText}>Salvar Alterações</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.cancelBtn}
-                      onPress={() => setIsEditing(false)}
-                    >
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditing(false)}>
                       <Text style={styles.cancelBtnText}>Cancelar</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <>
-                    <TouchableOpacity
-                      style={styles.editBtn}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <Ionicons
-                        name="pencil"
-                        size={moderateScale(18)}
-                        color="#FFF"
-                        style={{ marginRight: scale(8) }}
-                      />
+                    <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(true)}>
+                      <Ionicons name="pencil" size={moderateScale(18)} color="#FFF" style={{ marginRight: scale(8) }} />
                       <Text style={styles.saveBtnText}>Editar Descrição</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteBtn}
-                      onPress={handleExcluir}
-                    >
-                      <Ionicons
-                        name="trash"
-                        size={moderateScale(18)}
-                        color="#FF3B30"
-                        style={{ marginRight: scale(8) }}
-                      />
-                      <Text style={styles.deleteBtnText}>
-                        Excluir Solicitação
-                      </Text>
-                    </TouchableOpacity>
+
+                    {/* 🔴 A MÁGICA AQUI: O botão de excluir só aparece se o status for PENDENTE ou Vazio */}
+                    {(!chamado.status || chamado.status === "PENDENTE") && (
+                      <TouchableOpacity style={styles.deleteBtn} onPress={handleExcluir}>
+                        <Ionicons name="trash" size={moderateScale(18)} color="#FF3B30" style={{ marginRight: scale(8) }} />
+                        <Text style={styles.deleteBtnText}>Excluir Solicitação</Text>
+                      </TouchableOpacity>
+                    )}
                   </>
                 )}
               </View>
