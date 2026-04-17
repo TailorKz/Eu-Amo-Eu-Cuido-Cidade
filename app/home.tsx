@@ -25,6 +25,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -92,6 +93,10 @@ export default function Home() {
   }, []);
 
   const registrarParaPushNotifications = async () => {
+    if (Constants.appOwnership === 'expo') {
+      console.log("Rodando no Expo Go: Notificações Push desativadas para evitar crash.");
+      return;
+    }
     if (Device.isDevice) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -109,10 +114,11 @@ export default function Home() {
       try {
         const projectId =
           Constants.expoConfig?.extra?.eas?.projectId ??
-          Constants.easConfig?.projectId;
+          Constants.easConfig?.projectId ??
+          "b5eb0f86-1deb-4a4e-a519-874c0cd37fe3";
 
         if (!projectId) {
-          console.log("⚠️ Project ID não encontrado. Você rodou 'npx eas-cli init'?");
+          console.log("⚠️ Project ID não encontrado.");
           return;
         }
 
@@ -275,10 +281,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1,
   },
-  name: { fontSize: moderateScale(24), fontWeight: "600", color: "#333" },
+  name: { fontSize: scaledFont(25), fontWeight: "600", color: "#333" },
   logo: { width: scale(120), height: verticalScale(70) },
   title: {
-    fontSize: moderateScale(24),
+    fontSize: scaledFont(26),
     fontWeight: "700",
     color: "#333",
     marginTop: verticalScale(20),

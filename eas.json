@@ -6,19 +6,38 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"  //  APK para instalar direto no celular de dev
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk"  // APK para testes internos (manda por link)
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "aab"  // obrigatório para Play Store
+      },
+      "ios": {
+        "distribution": "store"  //  envia para App Store Connect / TestFlight
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"  //  começa no track interno da Play Store
+      },
+      "ios": {
+        "appleId": "seu@email.com",
+        "ascAppId": "ID_DO_APP_NO_APP_STORE_CONNECT",
+        "appleTeamId": "SEU_TEAM_ID"
+      }
+    }
   }
 }

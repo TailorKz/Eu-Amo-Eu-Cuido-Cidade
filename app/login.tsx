@@ -19,9 +19,13 @@ import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { cityAssets } from "./src/utils/cityAssets";
-import { moderateScale, verticalScale } from "./src/utils/responsive";
+import { moderateScale, verticalScale, scaledFont } from "./src/utils/responsive";
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
 
 export default function Login() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
@@ -55,6 +59,14 @@ export default function Login() {
 
   useEffect(() => {
     buscarConfiguracoesBackground();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setPositionAsync('absolute');
+      NavigationBar.setBackgroundColorAsync('transparent');
+      NavigationBar.setButtonStyleAsync('light'); // Ícones Brancos
+    }
   }, []);
 
   const buscarConfiguracoesBackground = async () => {
@@ -477,6 +489,19 @@ export default function Login() {
           </Modal>
         </View>
       </TouchableWithoutFeedback>
+      {Platform.OS === 'android' && (
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']} // Vai do transparente para uma sombra escura
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            width: '100%',
+            height: insets.bottom + 25, // Cobre a altura dos botões + um espacinho para o degradê
+            zIndex: 9999, // Fica por cima do wallpaper
+            pointerEvents: 'none', // Não bloqueia nenhum clique na tela
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -514,7 +539,7 @@ const styles = StyleSheet.create({
   textoCuidado: {
     color: "#3A6C77",
     marginTop: verticalScale(15),
-    fontSize: moderateScale(15),
+    fontSize: scaledFont(16),
     fontWeight: "600",
     marginBottom: verticalScale(40),
     textAlign: "center",
@@ -532,7 +557,7 @@ const styles = StyleSheet.create({
     marginTop: moderateScale(20),
   },
   buttonText: {
-    fontSize: moderateScale(24),
+    fontSize: scaledFont(24),
     color: "#ffffff",
     textAlign: "center",
     fontWeight: "600",
@@ -548,7 +573,7 @@ const styles = StyleSheet.create({
   },
   btnSecondaryText: {
     color: "#39555c",
-    fontSize: moderateScale(15),
+    fontSize: scaledFont(16),
     fontWeight: "600",
     textAlign: "center",
   },

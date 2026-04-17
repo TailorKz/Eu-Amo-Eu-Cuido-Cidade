@@ -18,9 +18,13 @@ import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { cityAssets } from "./src/utils/cityAssets";
-import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
 
 export default function Cadastro() {
+  const insets = useSafeAreaInsets(); 
   const router = useRouter();
   const cidadeSelecionada = useAuthStore((state) => state.cidadeSelecionada);
   const login = useAuthStore((state) => state.login);
@@ -49,6 +53,13 @@ export default function Cadastro() {
     password: "",
   });
 
+useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setPositionAsync('absolute');
+      NavigationBar.setBackgroundColorAsync('transparent');
+      NavigationBar.setButtonStyleAsync('light'); // Ícones Brancos
+    }
+  }, []);
   useEffect(() => {
     buscarConfiguracoes();
   }, []);
@@ -84,7 +95,7 @@ export default function Cadastro() {
     return !newErrors.nome && !newErrors.phone && !newErrors.password;
   }
 
-  // 🔴 PASSO 1: INICIA O CADASTRO E SOLICITA O SMS
+  // INICIA O CADASTRO E SOLICITA O SMS
   async function handleIniciarCadastro() {
     if (!validate()) return;
     if (!cidadeSelecionada) {
@@ -100,7 +111,7 @@ export default function Cadastro() {
       // Faz o pedido para o Java gerar e enviar o SMS
       const response = await axios.post(`https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/enviar-otp-cadastro?telefone=${phoneRaw}`);
       
-      // Guarda o código secreto na memória do celular
+      // Guarda o código na memória do celular
       setCodigoGeradoBackend(String(response.data.codigo)); 
       
       setIsCodeModalVisible(true);
@@ -112,13 +123,13 @@ export default function Cadastro() {
     }
   }
 
-  // 🔴 PASSO 2: CONFIRMA O CÓDIGO E CRIA A CONTA
+  // CONFIRMA O CÓDIGO E CRIA A CONTA
   async function handleConfirmarCodigo(codeDigitado: string) {
     
-    // 🔴 A TRAVA DE SEGURANÇA: Bloqueia imediatamente se não bater com o SMS!
+    // Bloqueia imediatamente se não bater com o SMS
     if (codeDigitado !== codigoGeradoBackend) {
       Alert.alert("Atenção", "O código digitado está incorreto.");
-      return; // Este return impede que a execução continue e crie a conta!
+      return; // return impede que a execução continue e crie a conta
     }
 
     setIsCodeModalVisible(false);
@@ -291,8 +302,23 @@ export default function Cadastro() {
             onResend={handleIniciarCadastro}
             description={`Enviamos um SMS com o código para o número: ${phone}`}
           />
+          
         </View>
+        
       </TouchableWithoutFeedback>
+      {Platform.OS === 'android' && (
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']} // Vai do transparente para uma sombra escura
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            width: '100%',
+            height: insets.bottom + 25, // Cobre a altura dos botões + um espacinho para o degradê
+            zIndex: 9999, // Fica por cima do wallpaper
+            pointerEvents: 'none', // Não bloqueia nenhum clique na tela
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -330,7 +356,7 @@ const styles = StyleSheet.create({
   textoCuidado: {
     color: "#3A6C77",
     marginTop: verticalScale(5),
-    fontSize: moderateScale(15),
+    fontSize: scaledFont(16),
     fontWeight: "600",
     marginBottom: verticalScale(20),
     textAlign: "center",
@@ -345,8 +371,10 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(10),
     backgroundColor: "#1F41BB",
     fontSize: moderateScale(18),
+    marginTop: verticalScale(10),
   },
   buttonText: {
+
     fontSize: moderateScale(24),
     color: "#ffffff",
     textAlign: "center",
@@ -355,7 +383,7 @@ const styles = StyleSheet.create({
   textoFinal: {
     marginTop: verticalScale(15),
     color: "#39555c",
-    fontSize: moderateScale(15),
+    fontSize: scaledFont(16),
     fontWeight: "600",
     marginBottom: verticalScale(20),
     textAlign: "center",

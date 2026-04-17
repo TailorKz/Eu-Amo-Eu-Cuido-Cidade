@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from "expo-router";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -24,14 +24,15 @@ export default function HomeScreen() {
   const selectRef = useRef<SelectRef>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const [cidadeEscolhida, setCidadeEscolhida] = useState<string | null>(null);
+
   if (isAuthenticated) {
     return <Redirect href="/home" />;
   }
 
   const handleNavigation = (path: "/login" | "/cadastro") => {
-    const cidadeAtual = useAuthStore.getState().cidadeSelecionada;
-
-    if (!cidadeAtual) {
+    // Verifica se escolheu a cidade
+    if (!cidadeEscolhida) {
       Alert.alert("Atenção", "Por favor, escolha a sua cidade antes de continuar.");
       selectRef.current?.openDropdown();
       
@@ -42,6 +43,8 @@ export default function HomeScreen() {
       return;
     }
     
+    // alva no banco de memória (Zustand)
+    useAuthStore.getState().setCidadeSelecionada(cidadeEscolhida);
     router.push(path);
   };
 
@@ -65,19 +68,19 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.bottomArea}>
             <Text style={styles.label}>Escolha sua cidade:</Text>
+            
             <Select
               ref={selectRef}
               placeholder="Escolha sua cidade"
               options={["Iporã do Oeste", "São Miguel do Oeste", "Itapiranga"]}
               onSelect={(value) => {
-                useAuthStore.getState().setCidadeSelecionada(value);
+                setCidadeEscolhida(value);
               }}
               onOpen={() => {
                 setTimeout(() => {
                   scrollViewRef.current?.scrollToEnd({ animated: true });
                 }, 150); 
               }}
-              // 🔴 NOVO: Retorna a tela ao topo suavemente quando fecha
               onClose={() => {
                 setTimeout(() => {
                   scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -100,6 +103,27 @@ export default function HomeScreen() {
                 <Text style={styles.secondaryText}>Entrar</Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.termsContainer}>
+              <Text style={styles.termsText}>
+                Ao continuar você declara estar ciente dos{" "}
+                <Text 
+                  style={styles.linkText} 
+                  onPress={() => router.push("/termos")}
+                >
+                  Termos de uso
+                </Text>
+                {" "}e{" "}
+                <Text 
+                  style={styles.linkText} 
+                  onPress={() => router.push("/privacidade")}
+                >
+                  Política de privacidade
+                </Text>
+                .
+              </Text>
+            </View>
+
           </View>
         </View>
       </ScrollView>
@@ -109,7 +133,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#E9EAEC" },
-  container: { paddingTop: verticalScale(30), paddingBottom: verticalScale(160) },
+  container: { paddingTop: verticalScale(30), paddingBottom: verticalScale(80) },
   title: {
     fontSize: scaledFont(30),
     fontWeight: "700",
@@ -160,7 +184,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     color: "white",
-    fontSize: moderateScale(16),
+    fontSize: scaledFont(17),
     fontWeight: "600",
   },
   secondaryButton: {
@@ -171,5 +195,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  secondaryText: { fontSize: moderateScale(16), fontWeight: "500" },
+  secondaryText: { fontSize: scaledFont(17), fontWeight: "500" },
+  
+  termsContainer: {
+    marginTop: verticalScale(25),
+    alignItems: "center",
+    paddingHorizontal: scale(10),
+  },
+  termsText: {
+    fontSize: scaledFont(12),
+    color: "#666",
+    textAlign: "center",
+    lineHeight: moderateScale(18),
+  },
+  linkText: {
+    color: "#1F41BB",
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
 });
