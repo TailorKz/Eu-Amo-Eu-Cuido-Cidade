@@ -13,6 +13,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.tailorkz.euamoeucuido",
+      buildNumber: "1",
       infoPlist: {
         NSCameraUsageDescription:
           "O aplicativo precisa de acesso à sua câmera para que você possa fotografar os problemas de zeladoria na cidade e anexá-los à sua solicitação.",
