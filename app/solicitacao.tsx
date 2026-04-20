@@ -135,6 +135,12 @@ export default function Solicitacao() {
       formData.append("localizacao", locationText);
       formData.append("observacao", observation);
 
+      // 🔴 NOVO: Enviar as coordenadas GPS exatas para o Java
+      if (selectedCoordinate) {
+        formData.append("latitude", String(selectedCoordinate.latitude));
+        formData.append("longitude", String(selectedCoordinate.longitude));
+      }
+
       const filename = imageUri.split("/").pop();
       const match = /\.(\w+)$/.exec(filename || "");
       const type = match ? `image/${match[1]}` : `image/jpeg`;
@@ -144,7 +150,12 @@ export default function Solicitacao() {
       const response = await axios.post(url, formData, { headers: { "Content-Type": "multipart/form-data" } });
       Alert.alert("Sucesso!", `A sua solicitação foi enviada!\n\nProtocolo: ${response.data.protocolo || "Gerado"}`, [{ text: "OK", onPress: () => router.replace("/home") }]);
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível enviar a solicitação. Tente novamente.");
+      // Trata o erro 403 do Java (Geofencing / Fora da Cidade)
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        Alert.alert("Fora dos Limites", error.response.data);
+      } else {
+        Alert.alert("Erro", "Não foi possível enviar a solicitação. Tente novamente.");
+      }
     } finally {
       setIsSubmitting(false);
     }
