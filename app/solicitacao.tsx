@@ -22,6 +22,7 @@ import MapView, { Marker } from "react-native-maps";
 import ImageView from "react-native-image-viewing";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { moderateScale, scale, verticalScale } from "./src/utils/responsive";
+import * as ImageManipulator from 'expo-image-manipulator';
 
 export default function Solicitacao() {
   const router = useRouter();
@@ -102,10 +103,19 @@ export default function Solicitacao() {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // <-- Câmera direta, sem tela de corte confusa
-      quality: 0.5,
+      allowsEditing: false, 
+      quality: 1, // Pode deixar a qualidade nativa aqui, pois vamos comprimir a seguir
     });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+
+    if (!result.canceled) {
+      // reduz a resolução da imagem
+      const manipResult = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 800 } }], // Trava a largura máxima em 800px (excelente para web/mobile)
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } // Comprime para JPEG leve
+      );
+      setImageUri(manipResult.uri);
+    }
   }
 
   async function handleOpenGallery() {
@@ -116,10 +126,19 @@ export default function Solicitacao() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // <-- Galeria direta
-      quality: 0.5,
+      allowsEditing: false, 
+      quality: 1,
     });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+
+    if (!result.canceled) {
+      // reduz a resolução da imagem
+      const manipResult = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 800 } }], // Trava a largura máxima em 800px
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      setImageUri(manipResult.uri);
+    }
   }
 
   async function handleSubmit() {
