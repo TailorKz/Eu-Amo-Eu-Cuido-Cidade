@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,7 +15,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomMenu } from "./src/components/BottomMenu";
 import { useAuthStore } from "./src/store/useAuthStore";
-import { moderateScale, scale, scaledFont, verticalScale } from "./src/utils/responsive";
+import {
+  moderateScale,
+  scale,
+  scaledFont,
+  verticalScale,
+} from "./src/utils/responsive";
 
 interface Report {
   id: number;
@@ -28,26 +34,29 @@ interface Report {
 
 export default function Reportos() {
   const router = useRouter();
-  // Adicionado "fiscalizacao" aos tipos possíveis de aba
-  const [activeTab, setActiveTab] = useState<"meus" | "setor" | "fiscalizacao">(
+
+  // "metricas" substitui "fiscalizacao"
+  const [activeTab, setActiveTab] = useState<"meus" | "setor" | "metricas">(
     "meus",
   );
 
   const [meusReportos, setMeusReportos] = useState<Report[]>([]);
   const [reportosSetor, setReportosSetor] = useState<Report[]>([]);
-  const [reportosVereador, setReportosVereador] = useState<Report[]>([]); 
+  const [metricasData, setMetricasData] = useState<any>(null);
+  const [periodoFiltro, setPeriodoFiltro] = useState<
+    "HOJE" | "SEMANA" | "MES" | "ANO" | "TUDO"
+  >("TUDO");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const user = useAuthStore((state) => state.user);
 
-  const isFuncionarioPrefeitura =
-    user?.perfil === "FUNCIONARIO" ||
-    user?.perfil === "GESTOR_SETOR" ||
-    user?.perfil === "SUPER_ADMIN";
-  // Identifica se é vereador
   const isVereador = user?.perfil === "VEREADOR";
+  const isGestaoGlobal =
+    user?.perfil === "SUPER_ADMIN" || user?.perfil === "PREFEITO";
+  const isFuncionarioPrefeitura =
+    user?.perfil === "FUNCIONARIO" || user?.perfil === "GESTOR_SETOR";
 
   const meuSetor = user?.setorAtuacao;
   const cidadeSelecionada =
@@ -65,10 +74,10 @@ export default function Reportos() {
   }
 
   async function carregarReportosDoSetor() {
-    if (!isFuncionarioPrefeitura) return;
+    if (!isFuncionarioPrefeitura && !isGestaoGlobal) return;
     try {
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${meuSetor}?cidade=${cidadeSelecionada}`;
-      if (user?.perfil === "SUPER_ADMIN") {
+      if (isGestaoGlobal) {
         url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeSelecionada}`;
       }
       const response = await axios.get(url);
@@ -78,23 +87,29 @@ export default function Reportos() {
     }
   }
 
-  // busca a lista do Vereador
-  async function carregarReportosVereador() {
-    if (!isVereador) return;
+  async function carregarMetricas() {
+    if (!isVereador && !isGestaoGlobal) return;
     try {
-      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/vereador?cidade=${cidadeSelecionada}`;
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/metricas?cidade=${cidadeSelecionada}&periodo=${periodoFiltro}`;
       const response = await axios.get(url);
-      setReportosVereador(response.data);
+      setMetricasData(response.data);
     } catch (error) {
-      console.log("Erro ao buscar reportos de fiscalização:", error);
+      console.log("Erro ao buscar métricas:", error);
     }
   }
+
+  // RECARREGA OS DADOS SEMPRE QUE O FILTRO MUDAR
+  useEffect(() => {
+    if (activeTab === "metricas") {
+      carregarMetricas();
+    }
+  }, [periodoFiltro, activeTab]);
 
   async function carregarTudo() {
     setIsLoading(true);
     await carregarMeusReportos();
     await carregarReportosDoSetor();
-    await carregarReportosVereador();
+    await carregarMetricas();
     setIsLoading(false);
   }
 
@@ -102,7 +117,7 @@ export default function Reportos() {
     setIsRefreshing(true);
     await carregarMeusReportos();
     await carregarReportosDoSetor();
-    await carregarReportosVereador();
+    await carregarMetricas();
     setIsRefreshing(false);
   }
 
@@ -136,6 +151,128 @@ export default function Reportos() {
     );
   };
 
+  const renderMetricas = () => {
+    if (!metricasData) return null;
+
+    const abrirLista = (tipo: string) => {
+      router.push({
+        pathname: "/lista-metricas",
+        params: { tipo, periodo: periodoFiltro },
+      } as any);
+    };
+
+    const FiltroBtn = ({ rotulo, valor }: { rotulo: string; valor: any }) => (
+      <TouchableOpacity
+        style={[
+          styles.filtroBtn,
+          periodoFiltro === valor && styles.filtroBtnAtivo,
+        ]}
+        onPress={() => setPeriodoFiltro(valor)}
+      >
+        <Text
+          style={[
+            styles.filtroTexto,
+            periodoFiltro === valor && styles.filtroTextoAtivo,
+          ]}
+        >
+          {rotulo}
+        </Text>
+      </TouchableOpacity>
+    );
+
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* BARRA DE FILTROS */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginVertical: 10 }}
+        >
+          <FiltroBtn rotulo="Hoje" valor="HOJE" />
+          <FiltroBtn rotulo="7 Dias" valor="SEMANA" />
+          <FiltroBtn rotulo="30 Dias" valor="MES" />
+          <FiltroBtn rotulo="1 Ano" valor="ANO" />
+          <FiltroBtn rotulo="Tudo" valor="TUDO" />
+        </ScrollView>
+
+        <View style={styles.metricasHeader}>
+          <Text style={styles.metricasTitle}>Painel de Transparência</Text>
+        </View>
+
+        <View style={styles.cardsRow}>
+          <TouchableOpacity
+            style={[styles.metricaCard, { backgroundColor: "#E8F0FE" }]}
+            onPress={() => abrirLista("ABERTAS_HOJE")}
+          >
+            <Text style={styles.metricaValor}>{metricasData.abertasHoje}</Text>
+            <Text style={styles.metricaLabel}>Abertas Hoje</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.metricaCard, { backgroundColor: "#F0F4F8" }]}
+            onPress={() => abrirLista("TOTAL")}
+          >
+            <Text style={styles.metricaValor}>{metricasData.total}</Text>
+            <Text style={styles.metricaLabel}>Total Acumulado</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.statusCardsContainer}>
+          <TouchableOpacity
+            style={styles.statusCard}
+            onPress={() => abrirLista("PENDENTE")}
+          >
+            <View style={[styles.statusIconBg, { backgroundColor: "#FFEBEE" }]}>
+              <Ionicons name="alert-circle" size={24} color="#F44336" />
+            </View>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusLabel}>Pendentes</Text>
+              <Text style={[styles.statusNumber, { color: "#F44336" }]}>
+                {metricasData.pendentes}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statusCard}
+            onPress={() => abrirLista("EM_ANDAMENTO")}
+          >
+            <View style={[styles.statusIconBg, { backgroundColor: "#FFF8E1" }]}>
+              <Ionicons name="construct" size={24} color="#FFC107" />
+            </View>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusLabel}>Em Andamento</Text>
+              <Text style={[styles.statusNumber, { color: "#FFC107" }]}>
+                {metricasData.emAndamento}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statusCard}
+            onPress={() => abrirLista("RESOLVIDO")}
+          >
+            <View style={[styles.statusIconBg, { backgroundColor: "#E8F5E9" }]}>
+              <Ionicons
+                name="checkmark-done-circle"
+                size={24}
+                color="#4CAF50"
+              />
+            </View>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusLabel}>Resolvidas</Text>
+              <Text style={[styles.statusNumber, { color: "#4CAF50" }]}>
+                {metricasData.resolvidas}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  };
+
   const renderItem = ({ item }: { item: Report }) => (
     <TouchableOpacity
       style={styles.card}
@@ -143,10 +280,7 @@ export default function Reportos() {
       onPress={() => {
         router.push({
           pathname: "/detalhes",
-          params: {
-            dados: JSON.stringify(item),
-            origem: activeTab, // Vai enviar "fiscalizacao" se o vereador clicar nesta aba
-          },
+          params: { dados: JSON.stringify(item), origem: activeTab },
         });
       }}
     >
@@ -171,10 +305,21 @@ export default function Reportos() {
 
       <View style={styles.cardInfo}>
         <View style={styles.cardHeader}>
-          <Text style={styles.categoryTitle}>{item.protocolo ? `Protocolo ${item.protocolo}` : `Solicitação #${item.id}`}</Text>
+          <Text style={styles.categoryTitle}>
+            {item.protocolo
+              ? `Protocolo ${item.protocolo}`
+              : `Solicitação #${item.id}`}
+          </Text>
           <Text style={styles.dateText}>{formatarData(item.dataCriacao)}</Text>
         </View>
-        <Text style={{ fontSize: moderateScale(13), color: "#1F41BB", fontWeight: "600", marginTop: verticalScale(4) }}>
+        <Text
+          style={{
+            fontSize: moderateScale(13),
+            color: "#1F41BB",
+            fontWeight: "600",
+            marginTop: verticalScale(4),
+          }}
+        >
           Setor: {item.categoria}
         </Text>
 
@@ -207,7 +352,7 @@ export default function Reportos() {
       <View style={styles.container}>
         <Text style={styles.pageTitle}>Solicitações</Text>
 
-        {(isFuncionarioPrefeitura || isVereador) && (
+        {(isFuncionarioPrefeitura || isVereador || isGestaoGlobal) && (
           <View style={styles.tabContainer}>
             <TouchableOpacity
               style={[
@@ -226,7 +371,7 @@ export default function Reportos() {
               </Text>
             </TouchableOpacity>
 
-            {isFuncionarioPrefeitura && (
+            {(isFuncionarioPrefeitura || isGestaoGlobal) && (
               <TouchableOpacity
                 style={[
                   styles.tabButton,
@@ -240,26 +385,26 @@ export default function Reportos() {
                     activeTab === "setor" && styles.tabTextActive,
                   ]}
                 >
-                  Do Meu Setor
+                  {isGestaoGlobal ? "Gestão da Cidade" : "Do Meu Setor"}
                 </Text>
               </TouchableOpacity>
             )}
 
-            {isVereador && (
+            {(isVereador || isGestaoGlobal) && (
               <TouchableOpacity
                 style={[
                   styles.tabButton,
-                  activeTab === "fiscalizacao" && styles.tabButtonActive,
+                  activeTab === "metricas" && styles.tabButtonActive,
                 ]}
-                onPress={() => setActiveTab("fiscalizacao")}
+                onPress={() => setActiveTab("metricas")}
               >
                 <Text
                   style={[
                     styles.tabText,
-                    activeTab === "fiscalizacao" && styles.tabTextActive,
+                    activeTab === "metricas" && styles.tabTextActive,
                   ]}
                 >
-                  Fiscalização
+                  Métricas
                 </Text>
               </TouchableOpacity>
             )}
@@ -272,16 +417,11 @@ export default function Reportos() {
             color="#1F41BB"
             style={{ marginTop: verticalScale(50) }}
           />
+        ) : activeTab === "metricas" ? (
+          renderMetricas()
         ) : (
           <FlatList
-            // Lógica para renderizar a lista certa
-            data={
-              activeTab === "meus"
-                ? meusReportos
-                : activeTab === "setor"
-                  ? reportosSetor
-                  : reportosVereador
-            }
+            data={activeTab === "meus" ? meusReportos : reportosSetor}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
@@ -292,9 +432,7 @@ export default function Reportos() {
               <Text style={styles.emptyText}>
                 {activeTab === "meus"
                   ? "Você ainda não fez nenhuma solicitação."
-                  : activeTab === "setor"
-                    ? "Nenhuma solicitação pendente no seu setor."
-                    : "Nenhuma solicitação em andamento para fiscalizar."}
+                  : "Nenhuma solicitação pendente no momento."}
               </Text>
             }
           />
@@ -342,14 +480,19 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  tabText: { fontSize: scaledFont(14), fontWeight: "600", color: "#666" },
+  tabText: {
+    fontSize: scaledFont(13),
+    fontWeight: "600",
+    color: "#666",
+    textAlign: "center",
+  },
   tabTextActive: { color: "#1F41BB" },
   listContent: { paddingBottom: verticalScale(100) },
   emptyText: {
     textAlign: "center",
     marginTop: verticalScale(40),
     color: "#888",
-    fontSize: moderateScale(16),
+    fontSize: scaledFont(16),
   },
   card: {
     flexDirection: "row",
@@ -378,12 +521,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   categoryTitle: {
-    fontSize: scaledFont(18),
+    fontSize: scaledFont(16),
     fontWeight: "700",
     color: "#333",
     flex: 1,
   },
-  dateText: { fontSize: scaledFont(16), color: "#888", fontWeight: "500" },
+  dateText: { fontSize: scaledFont(14), color: "#888", fontWeight: "500" },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -407,9 +550,85 @@ const styles = StyleSheet.create({
     marginRight: scale(6),
   },
   statusText: {
-    fontSize: scaledFont(16),
+    fontSize: scaledFont(14),
     fontWeight: "600",
     color: "#444",
     textTransform: "capitalize",
   },
+
+  // NOVOS ESTILOS PARA MÉTRICAS
+  metricasHeader: {
+    alignItems: "center",
+    marginBottom: verticalScale(25),
+    marginTop: verticalScale(10),
+  },
+  metricasTitle: {
+    fontSize: scaledFont(22),
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: verticalScale(10),
+  },
+  metricasSubtitle: {
+    fontSize: scaledFont(14),
+    color: "#666",
+    marginTop: verticalScale(5),
+  },
+  cardsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: verticalScale(20),
+  },
+  metricaCard: {
+    flex: 1,
+    padding: moderateScale(20),
+    borderRadius: moderateScale(16),
+    alignItems: "center",
+    marginHorizontal: scale(5),
+    elevation: 1,
+  },
+  metricaValor: {
+    fontSize: scaledFont(28),
+    fontWeight: "bold",
+    color: "#1F41BB",
+  },
+  metricaLabel: {
+    fontSize: scaledFont(13),
+    color: "#555",
+    fontWeight: "600",
+    marginTop: verticalScale(5),
+  },
+  statusCardsContainer: {
+    backgroundColor: "#FFF",
+    borderRadius: moderateScale(16),
+    padding: moderateScale(15),
+    elevation: 2,
+  },
+  statusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: verticalScale(15),
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  statusIconBg: {
+    width: moderateScale(46),
+    height: moderateScale(46),
+    borderRadius: moderateScale(23),
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: scale(15),
+  },
+  statusTextContainer: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusLabel: { fontSize: scaledFont(16), color: "#333", fontWeight: "600" },
+  statusNumber: { fontSize: scaledFont(22), fontWeight: "bold" },
+
+  filtroBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#E0E5E8", borderRadius: 20, marginRight: 8, elevation: 1 },
+  filtroBtnAtivo: { backgroundColor: "#1F41BB" },
+  filtroTexto: { color: "#555", fontWeight: "bold" },
+  filtroTextoAtivo: { color: "#FFF" },
 });

@@ -10,6 +10,7 @@ interface User {
   perfil?: string;
   setorAtuacao?: string | null; 
   pushToken?: string;
+  token?: string;
 }
 
 interface AuthState {

@@ -104,7 +104,7 @@ export default function Solicitacao() {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false, 
-      quality: 1, // Pode deixar a qualidade nativa aqui, pois vamos comprimir a seguir
+      quality: 1,
     });
 
     if (!result.canceled) {
@@ -154,7 +154,7 @@ export default function Solicitacao() {
       formData.append("localizacao", locationText);
       formData.append("observacao", observation);
 
-      // 🔴 NOVO: Enviar as coordenadas GPS exatas para o Java
+      // envia as coordenadas GPS exatas para o Java
       if (selectedCoordinate) {
         formData.append("latitude", String(selectedCoordinate.latitude));
         formData.append("longitude", String(selectedCoordinate.longitude));

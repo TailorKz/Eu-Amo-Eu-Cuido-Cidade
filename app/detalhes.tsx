@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -159,12 +160,21 @@ export default function Detalhes() {
         "Permissão necessária",
         "Precisamos acessar a câmera.",
       );
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // <-- Sem tela de corte confusa
-      quality: 0.5,
+      allowsEditing: false,
+      quality: 1,
     });
-    if (!result.canceled) setImagemResolvidaUri(result.assets[0].uri);
+
+    if (!result.canceled) {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      setImagemResolvidaUri(manipResult.uri);
+    }
   }
 
   async function handleOpenGalleryResolvido() {
@@ -174,12 +184,21 @@ export default function Detalhes() {
         "Permissão necessária",
         "Precisamos acessar a galeria.",
       );
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
-      quality: 0.5,
+      quality: 1,
     });
-    if (!result.canceled) setImagemResolvidaUri(result.assets[0].uri);
+
+    if (!result.canceled) {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      setImagemResolvidaUri(manipResult.uri);
+    }
   }
 
   const handleAtualizarFuncionario = async () => {
@@ -214,10 +233,22 @@ export default function Detalhes() {
     }
   };
 
-  const abrirNoMapa = () =>
-    Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(chamado.localizacao)}`,
-    );
+  const abrirNoMapa = () => {
+    // Se o chamado tiver GPS exato, traça a rota milimétrica
+    if (chamado.latitude && chamado.longitude) {
+      Linking.openURL(
+        `https://www.google.com/maps/dir/?api=1&destination=${chamado.latitude},${chamado.longitude}`,
+      );
+    } else {
+      // Fallback para chamados antigos apenas com texto
+      const enderecoFormatado = encodeURIComponent(
+        `${chamado.localizacao}, ${cidadeSelecionada || ""}`,
+      );
+      Linking.openURL(
+        `https://www.google.com/maps/dir/?api=1&destination=${enderecoFormatado}`,
+      );
+    }
+  };
 
   const abrirZoom = (urlNuvem: string | null) => {
     setImagemParaZoom(
@@ -360,7 +391,9 @@ export default function Detalhes() {
                     size={moderateScale(18)}
                     color="#1F41BB"
                   />
-                  <Text style={styles.valueText}>{chamado.localizacao}</Text>
+                  <Text style={styles.valueText}>
+                    {editLocalizacao || chamado.localizacao}
+                  </Text>
                 </View>
               )}
 
@@ -416,7 +449,9 @@ export default function Detalhes() {
                   />
                 ) : (
                   <Text style={styles.observacaoText}>
-                    {chamado.observacao || "Nenhuma observação informada."}
+                    {editObservacao ||
+                      chamado.observacao ||
+                      "Nenhuma observação informada."}
                   </Text>
                 )}
               </View>
@@ -652,25 +687,48 @@ export default function Detalhes() {
               <View style={styles.actionButtons}>
                 {isEditing ? (
                   <>
-                    <TouchableOpacity style={styles.saveBtn} onPress={handleSalvarEdicao}>
+                    <TouchableOpacity
+                      style={styles.saveBtn}
+                      onPress={handleSalvarEdicao}
+                    >
                       <Text style={styles.saveBtnText}>Salvar Alterações</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditing(false)}>
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => setIsEditing(false)}
+                    >
                       <Text style={styles.cancelBtnText}>Cancelar</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <>
-                    <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(true)}>
-                      <Ionicons name="pencil" size={moderateScale(18)} color="#FFF" style={{ marginRight: scale(8) }} />
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={() => setIsEditing(true)}
+                    >
+                      <Ionicons
+                        name="pencil"
+                        size={moderateScale(18)}
+                        color="#FFF"
+                        style={{ marginRight: scale(8) }}
+                      />
                       <Text style={styles.saveBtnText}>Editar Descrição</Text>
                     </TouchableOpacity>
 
-                    {/* 🔴 A MÁGICA AQUI: O botão de excluir só aparece se o status for PENDENTE ou Vazio */}
                     {(!chamado.status || chamado.status === "PENDENTE") && (
-                      <TouchableOpacity style={styles.deleteBtn} onPress={handleExcluir}>
-                        <Ionicons name="trash" size={moderateScale(18)} color="#FF3B30" style={{ marginRight: scale(8) }} />
-                        <Text style={styles.deleteBtnText}>Excluir Solicitação</Text>
+                      <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={handleExcluir}
+                      >
+                        <Ionicons
+                          name="trash"
+                          size={moderateScale(18)}
+                          color="#FF3B30"
+                          style={{ marginRight: scale(8) }}
+                        />
+                        <Text style={styles.deleteBtnText}>
+                          Excluir Solicitação
+                        </Text>
                       </TouchableOpacity>
                     )}
                   </>
