@@ -9,6 +9,8 @@ node_modules/
 .env*
 .env/*
 
+google-services.json
+
 # Expo
 .expo/
 dist/

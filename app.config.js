@@ -2,7 +2,7 @@ import "dotenv/config";
 
 export default {
   expo: {
-    name: "Eu-Amo-Eu-Cuido-Cidade",
+    name: "Eu Amo Eu Cuido",
     slug: "eu-amo-eu-cuido-cidade",
     version: "1.0.0",
     orientation: "portrait",
@@ -27,11 +27,13 @@ export default {
       },
     },
     android: {
+      versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/images/iconandroid.png",
         backgroundColor: "#ffffff",
       },
       package: "com.tailorkz.euamoeucuido",
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       permissions: [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
