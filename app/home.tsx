@@ -24,6 +24,7 @@ import { useAuthStore } from "./src/store/useAuthStore";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 
 
 Notifications.setNotificationHandler({
@@ -96,6 +97,16 @@ export default function Home() {
     if (Constants.appOwnership === 'expo') {
       console.log("Rodando no Expo Go: Notificações Push desativadas para evitar crash.");
       return;
+    }
+
+    // Cria o Canal de Notificação android
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#1F41BB',
+      });
     }
     if (Device.isDevice) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();

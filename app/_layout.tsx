@@ -4,7 +4,6 @@ import { useAuthStore } from './src/store/useAuthStore';
 
 axios.interceptors.request.use(
   (config) => {
-    // Acessa o estado global do Zustand sem precisar estar dentro de um componente React
     const token = useAuthStore.getState().user?.token;
     
     if (token) {
