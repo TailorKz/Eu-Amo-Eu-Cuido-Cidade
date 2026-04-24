@@ -1,5 +1,6 @@
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
+import * as NavigationBar from "expo-navigation-bar";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   Image,
   Keyboard,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,14 +17,16 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CodeVerificationModal } from "./src/components/CodeVerificationModal";
 import { Input } from "./src/components/Input";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { cityAssets } from "./src/utils/cityAssets";
-import { moderateScale, verticalScale, scaledFont } from "./src/utils/responsive";
-import { Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as NavigationBar from 'expo-navigation-bar';
+import {
+  moderateScale,
+  scaledFont,
+  verticalScale,
+} from "./src/utils/responsive";
 
 export default function Login() {
   const insets = useSafeAreaInsets();
@@ -62,10 +66,10 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      NavigationBar.setPositionAsync('absolute');
-      NavigationBar.setBackgroundColorAsync('transparent');
-      NavigationBar.setButtonStyleAsync('light'); // Ícones Brancos
+    if (Platform.OS === "android") {
+      NavigationBar.setPositionAsync("absolute");
+      NavigationBar.setBackgroundColorAsync("transparent");
+      NavigationBar.setButtonStyleAsync("light"); // Ícones Brancos
     }
   }, []);
 
@@ -146,13 +150,15 @@ export default function Login() {
 
     setIsLoading(true);
     try {
+      // Adicionado o encodeURIComponent na cidadeSelecionada
       await axios.post(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/solicitar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}`,
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/solicitar?telefone=${numeroLimpo}&cidade=${encodeURIComponent(cidadeSelecionada || "")}`,
       );
 
       setIsForgotModalVisible(false);
       setTimeout(() => setIsCodeModalVisible(true), 500);
-    } catch (error) {
+    } catch (error: any) { // <-- Adicionado o ': any' aqui
+      console.log("Erro ao solicitar código:", error.response?.data || error.message);
       Alert.alert(
         "Erro",
         "Não encontramos uma conta com este número na sua cidade.",
@@ -163,14 +169,16 @@ export default function Login() {
   };
 
   // VALIDA O CÓDIGO NA HORA (NOVA TRAVA DE SEGURANÇA)
+ // VALIDA O CÓDIGO NA HORA (NOVA TRAVA DE SEGURANÇA)
   const handleCodeConfirm = async (code: string) => {
     setIsLoading(true);
     try {
       const numeroLimpo = forgotPhone.replace(/\D/g, "");
 
       // Bate no Java para perguntar se o código que o cidadão digitou está certo
+      // Adicionado o encodeURIComponent
       await axios.post(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/validar-codigo?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${code}`,
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/validar-codigo?telefone=${numeroLimpo}&cidade=${encodeURIComponent(cidadeSelecionada || "")}&codigo=${code}`,
       );
 
       // Se o Java responder OK, avança!
@@ -178,8 +186,8 @@ export default function Login() {
       setNewPassword("");
       setIsCodeModalVisible(false);
       setTimeout(() => setIsNewPasswordModalVisible(true), 500);
-    } catch (error) {
-      // Se o Java devolver erro 401 (Código inválido), barra na hora!
+    } catch (error: any) { // <-- Adicionado o ': any' aqui
+      console.log("Erro ao validar código:", error.response?.data || error.message);
       Alert.alert("Erro", "O código digitado está incorreto ou expirou.");
     } finally {
       setIsLoading(false);
@@ -197,8 +205,9 @@ export default function Login() {
     try {
       const numeroLimpo = forgotPhone.replace(/\D/g, "");
 
+      // Adicionado o encodeURIComponent
       await axios.put(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/alterar?telefone=${numeroLimpo}&cidade=${cidadeSelecionada}&codigo=${codigoRecuperacao}&novaSenha=${newPassword}`,
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/recuperar-senha/alterar?telefone=${numeroLimpo}&cidade=${encodeURIComponent(cidadeSelecionada || "")}&codigo=${codigoRecuperacao}&novaSenha=${newPassword}`,
       );
 
       Alert.alert(
@@ -209,7 +218,8 @@ export default function Login() {
       setNewPassword("");
       setForgotPhone("");
       setCodigoRecuperacao("");
-    } catch (error) {
+    } catch (error: any) {
+      console.log("Erro ao salvar senha:", error.response?.data || error.message);
       Alert.alert("Erro", "Ocorreu um erro ao redefinir a senha.");
     } finally {
       setIsLoading(false);
@@ -377,6 +387,7 @@ export default function Login() {
                           /\d/,
                           /\d/,
                           ")",
+                          " ",
                           /\d/,
                           /\d/,
                           /\d/,
@@ -489,16 +500,16 @@ export default function Login() {
           </Modal>
         </View>
       </TouchableWithoutFeedback>
-      {Platform.OS === 'android' && (
+      {Platform.OS === "android" && (
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']} // Vai do transparente para uma sombra escura
+          colors={["transparent", "rgba(0,0,0,0.7)"]} // Vai do transparente para uma sombra escura
           style={{
-            position: 'absolute',
+            position: "absolute",
             bottom: 0,
-            width: '100%',
+            width: "100%",
             height: insets.bottom + 25, // Cobre a altura dos botões + um espacinho para o degradê
             zIndex: 9999, // Fica por cima do wallpaper
-            pointerEvents: 'none', // Não bloqueia nenhum clique na tela
+            pointerEvents: "none", // Não bloqueia nenhum clique na tela
           }}
         />
       )}
