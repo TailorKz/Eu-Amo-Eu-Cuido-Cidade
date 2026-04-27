@@ -45,6 +45,25 @@ export default function Detalhes() {
 
   const scrollRef = useRef<ScrollView>(null);
 
+  const chatScrollRef = useRef<ScrollView>(null); //scroll do chat
+
+  //ESTADOS DO CHAT
+  interface MensagemChat {
+    id: number;
+    texto: string;
+    remetente: string;
+    dataHora: string;
+  }
+  const [mensagens, setMensagens] = useState<MensagemChat[]>([]);
+  const [novaMensagem, setNovaMensagem] = useState("");
+  const [isEnviandoMsg, setIsEnviandoMsg] = useState(false);
+
+  // ESTADOS PARA O VISUAL DO CHAT
+  const [isChatExpanded, setIsChatExpanded] = useState(true); // Começa fechado para não poluir a tela
+  const chatY = useRef(0);
+  const chatInputY = useRef(0);
+  const infoCardY = useRef(0);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editLocalizacao, setEditLocalizacao] = useState(
     chamado?.localizacao || "",
@@ -87,7 +106,53 @@ export default function Detalhes() {
     if (isModoGestao) {
       carregarSetores();
     }
+    // Carrega o histórico do chat sempre que abrir a tela
+    if (chamado?.id) {
+      carregarMensagens(); // Carrega na hora que abre a tela
+
+      // procura novas mensagens a cada 5 segundos de forma invisível
+      const intervaloChat = setInterval(() => {
+        carregarMensagens();
+      }, 5000);
+
+      // Quando a pessoa sair desta tela, desligamos o relógio para poupar internet/bateria
+      return () => clearInterval(intervaloChat);
+    }
   }, []);
+
+  const carregarMensagens = async () => {
+    try {
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}/mensagens`,
+      );
+      setMensagens(response.data);
+    } catch (error) {
+      console.log("Erro ao carregar chat:", error);
+    }
+  };
+
+  const handleEnviarMensagem = async () => {
+    if (!novaMensagem.trim()) return;
+    setIsEnviandoMsg(true);
+    try {
+      const remetente = isModoGestao ? "PREFEITURA" : "CIDADÃO";
+      await axios.post(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}/mensagens`,
+        null,
+        { params: { texto: novaMensagem, remetente } },
+      );
+      setNovaMensagem("");
+      await carregarMensagens();
+      setTimeout(() => {
+        chatScrollRef.current?.scrollToEnd({ animated: true });
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível enviar a mensagem.");
+    } finally {
+      setIsEnviandoMsg(false);
+    }
+  };
 
   const carregarSetores = async () => {
     try {
@@ -279,8 +344,8 @@ export default function Detalhes() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={0}
         >
           <ScrollView
             ref={scrollRef}
@@ -288,6 +353,7 @@ export default function Detalhes() {
             contentContainerStyle={styles.container}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
           >
             <TouchableOpacity
               style={styles.imageContainer}
@@ -314,7 +380,10 @@ export default function Detalhes() {
               )}
             </TouchableOpacity>
 
-            <View style={styles.infoCard}>
+            <View 
+              style={styles.infoCard}
+              onLayout={(e) => { infoCardY.current = e.nativeEvent.layout.y; }}
+            >
               <View style={styles.rowBetween}>
                 <Text style={styles.categoria}>{chamado.categoria}</Text>
                 <View
@@ -456,11 +525,139 @@ export default function Detalhes() {
                 )}
               </View>
 
+              {/* --- INÍCIO DO SISTEMA DE CHAT --- */}
+              <View 
+                style={styles.chatContainer}
+                onLayout={(e) => { chatY.current = e.nativeEvent.layout.y; }}
+              >
+                {/* Cabeçalho expansível — igual ao original */}
+                <TouchableOpacity
+                  style={styles.chatHeader}
+                  onPress={() => setIsChatExpanded(!isChatExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.chatTitle}>
+                    <Ionicons name="chatbubbles" size={moderateScale(18)} />{" "}
+                    Histórico de Conversa
+                  </Text>
+                  <Ionicons
+                    name={isChatExpanded ? "chevron-up" : "chevron-down"}
+                    size={moderateScale(20)}
+                    color="#1F41BB"
+                  />
+                </TouchableOpacity>
+
+                {isChatExpanded && (
+                  <>
+                    <ScrollView
+                      ref={chatScrollRef}
+                      style={styles.chatMessagesScroll}
+                      contentContainerStyle={{
+                        paddingBottom: verticalScale(10),
+                      }}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                      // Rola para o fim automaticamente quando novas mensagens chegam
+                      onContentSizeChange={() =>
+                        chatScrollRef.current?.scrollToEnd({ animated: false })
+                      }
+                    >
+                      {mensagens.length === 0 ? (
+                        <Text style={styles.chatEmpty}>
+                          Nenhuma mensagem enviada ainda.
+                        </Text>
+                      ) : (
+                        mensagens.map((msg) => {
+                          const isPrefeitura = msg.remetente === "PREFEITURA";
+                          return (
+                            <View
+                              key={msg.id}
+                              style={[
+                                styles.chatBubble,
+                                isPrefeitura
+                                  ? styles.chatBubblePrefeitura
+                                  : styles.chatBubbleCidadao,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.chatRemetente,
+                                  isPrefeitura
+                                    ? { color: "#1F41BB" }
+                                    : { color: "#E0E0E0" },
+                                ]}
+                              >
+                                {isPrefeitura ? "🏢 Equipe Responsável" : "👤 Você"}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.chatTexto,
+                                  isPrefeitura
+                                    ? { color: "#333" }
+                                    : { color: "#FFF" },
+                                ]}
+                              >
+                                {msg.texto}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.chatData,
+                                  isPrefeitura
+                                    ? { color: "#999" }
+                                    : { color: "#D0D0D0" },
+                                ]}
+                              >
+                                {new Date(msg.dataHora).toLocaleString(
+                                  "pt-BR",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                  },
+                                )}
+                              </Text>
+                            </View>
+                          );
+                        })
+                      )}
+                    </ScrollView>
+
+                    <View 
+                  style={styles.chatInputContainer}
+                  // Descobre a posição exata do campo do chat
+                  onLayout={(e) => { chatInputY.current = e.nativeEvent.layout.y; }}
+                >
+                  <TextInput
+                    style={styles.chatInput}
+                    placeholder="Digite sua mensagem..."
+                    placeholderTextColor="#999"
+                    value={novaMensagem}
+                    onChangeText={setNovaMensagem}
+                    multiline
+                    onFocus={() => {
+                      // tempo para o teclado abrir
+                      setTimeout(() => {
+                        scrollRef.current?.scrollTo({
+                          y: infoCardY.current + chatY.current + chatInputY.current - 200,
+                          animated: true,
+                        });
+                      }, 300);
+                    }}
+                  />
+                  <TouchableOpacity style={styles.chatSendBtn} onPress={handleEnviarMensagem} disabled={isEnviandoMsg}>
+                    {isEnviandoMsg ? <ActivityIndicator size="small" color="#FFF" /> : <Ionicons name="send" size={moderateScale(20)} color="#FFF" />}
+                  </TouchableOpacity>
+                </View>
+                  </>
+                )}
+              </View>
+
               {!isModoGestao && chamado.resposta && (
                 <View style={styles.respostaBox}>
                   <Text style={styles.respostaTitle}>
                     <Ionicons name="business" size={moderateScale(16)} />{" "}
-                    Resposta da Prefeitura:
+                    Resposta do chamado:
                   </Text>
                   <Text style={styles.respostaText}>{chamado.resposta}</Text>
                   {chamado.urlImagemResolvida && (
@@ -818,7 +1015,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
   },
-  container: { padding: scale(16), paddingBottom: verticalScale(50) },
+  container: { padding: scale(16), paddingBottom: verticalScale(120) },
   imageContainer: {
     width: "100%",
     height: verticalScale(200),
@@ -1109,4 +1306,92 @@ const styles = StyleSheet.create({
   },
   sectorListText: { fontSize: moderateScale(16), color: "#555" },
   sectorListTextActive: { color: "#1F41BB", fontWeight: "bold" },
+
+  chatContainer: {
+    marginTop: verticalScale(20),
+    backgroundColor: "#F9F9F9",
+    borderRadius: moderateScale(12),
+    padding: scale(16),
+    borderWidth: 1,
+    borderColor: "#EEE",
+  },
+  chatTitle: {
+    fontSize: scaledFont(16),
+    fontWeight: "bold",
+    color: "#1F41BB",
+    marginBottom: verticalScale(15),
+  },
+  chatEmpty: {
+    color: "#999",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginVertical: verticalScale(10),
+  },
+  chatBubble: {
+    padding: scale(12),
+    borderRadius: moderateScale(12),
+    marginBottom: verticalScale(10),
+    maxWidth: "85%",
+  },
+  chatBubblePrefeitura: {
+    backgroundColor: "#E4EBF7",
+    alignSelf: "flex-start",
+    borderBottomLeftRadius: 0,
+  },
+  chatBubbleCidadao: {
+    backgroundColor: "#1F41BB",
+    alignSelf: "flex-end",
+    borderBottomRightRadius: 0,
+  },
+  chatRemetente: {
+    fontSize: scaledFont(12),
+    fontWeight: "bold",
+    marginBottom: verticalScale(4),
+  },
+  chatTexto: { fontSize: scaledFont(15) },
+  chatData: {
+    fontSize: scaledFont(10),
+    marginTop: verticalScale(5),
+    textAlign: "right",
+  },
+  chatInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: verticalScale(15),
+    borderTopWidth: 1,
+    borderTopColor: "#DDD",
+    paddingTop: verticalScale(15),
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#CCC",
+    borderRadius: moderateScale(20),
+    paddingHorizontal: scale(15),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(10),
+    minHeight: verticalScale(45),
+    maxHeight: verticalScale(100),
+  },
+  chatSendBtn: {
+    backgroundColor: "#1F41BB",
+    width: moderateScale(45),
+    height: moderateScale(45),
+    borderRadius: moderateScale(25),
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: scale(10),
+  },
+  chatHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: verticalScale(10),
+  },
+
+  chatMessagesScroll: {
+    maxHeight: verticalScale(280),
+    marginBottom: verticalScale(5),
+  },
 });

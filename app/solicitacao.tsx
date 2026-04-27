@@ -60,8 +60,10 @@ export default function Solicitacao() {
         setIsLoadingLocation(false);
         return;
       }
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      // PRECISÃO MÁXIMA ATIVADA AQUI (Highest)
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
       setSelectedCoordinate({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+      
       const geocode = await Location.reverseGeocodeAsync({ latitude: location.coords.latitude, longitude: location.coords.longitude });
       if (geocode.length > 0) processarGeocode(geocode[0]);
     } catch (error) {
@@ -72,13 +74,26 @@ export default function Solicitacao() {
   }
 
   const processarGeocode = (address: Location.LocationGeocodedAddress) => {
-    const street = address.street || address.name || "Endereço não encontrado";
-    const streetNumber = address.streetNumber ? `, ${address.streetNumber}` : "";
-    const neighborhood = address.district || address.subregion || "";
-    const falsosBairros = ["São Miguel do Oeste", "Descanso", "Santa Helena", "Tunápolis", "Belmonte", "Mondaí", "Itapiranga"];
-    let neighborhoodText = "";
-    if (neighborhood && !falsosBairros.includes(neighborhood)) neighborhoodText = ` - ${neighborhood}`;
-    setLocationText(`${street}${streetNumber}${neighborhoodText} - ${cidadeSelecionada}`);
+    // Pega os dados reais vindos da API de Mapas
+    const rua = address.street || address.name || "";
+    const numero = address.streetNumber ? `, ${address.streetNumber}` : "";
+    const bairro = address.district ? ` - ${address.district}` : "";
+
+    // O GPS costuma colocar a cidade no campo "city" ou "subregion"
+    const cidadeReal = address.city || address.subregion || cidadeSelecionada;
+
+    // Monta o endereço de forma limpa (Rua, Número - Bairro)
+    let enderecoCompleto = `${rua}${numero}${bairro}`;
+
+    // Limpa vírgulas ou traços sobrando no começo caso o GPS não ache o nome da rua
+    enderecoCompleto = enderecoCompleto.replace(/^[\s,-]+/, '');
+
+    if (!enderecoCompleto) {
+      enderecoCompleto = "Localização aproximada";
+    }
+
+    // Exibe exatamente onde o cidadão está
+    setLocationText(`${enderecoCompleto} - ${cidadeReal}`);
   };
 
   const handleConfirmMapLocation = async () => {
@@ -233,11 +248,29 @@ export default function Solicitacao() {
             {isLoadingLocation ? (
               <ActivityIndicator size="small" color="#1F41BB" style={{ marginLeft: scale(10) }} />
             ) : (
-              <TextInput style={styles.input} value={locationText} onChangeText={setLocationText} placeholder="A aguardar GPS..." placeholderTextColor="#999" onFocus={() => setTimeout(() => scrollRef.current?.scrollTo({ y: localizacaoY.current - 20, animated: true }), 150)} />
+              <TextInput 
+                style={styles.input} 
+                value={locationText} 
+                onChangeText={(text) => {
+                  setLocationText(text);
+                  // O SEGREDO ESTÁ AQUI: Se o cidadão digitar à mão, apagamos o GPS de fundo.
+                  // Assim, o Java sabe que é um endereço manual, desliga a Cerca Virtual e aceita!
+                  setSelectedCoordinate(null);
+                }} 
+                placeholder="Digite o endereço..." 
+                placeholderTextColor="#999" 
+                onFocus={() => setTimeout(() => scrollRef.current?.scrollTo({ y: localizacaoY.current - 20, animated: true }), 150)} 
+              />
             )}
           </View>
 
-          <TouchableOpacity style={styles.openMapBtn} onPress={() => setIsMapModalVisible(true)}>
+          <TouchableOpacity style={styles.openMapBtn} onPress={() => {
+            // Se a pessoa apagou a coordenada ao digitar, mas depois desistiu e abriu o mapa:
+            if (!selectedCoordinate) {
+              fetchLocation();
+            }
+            setIsMapModalVisible(true);
+          }}>
             <Ionicons name="map" size={16} color="#1F41BB" />
             <Text style={styles.openMapBtnText}>Ajustar localização no mapa</Text>
           </TouchableOpacity>

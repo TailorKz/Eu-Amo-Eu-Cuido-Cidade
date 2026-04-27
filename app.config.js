@@ -33,7 +33,7 @@ export default {
         backgroundColor: "#ffffff",
       },
       package: "com.tailorkz.euamoeucuido",
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./google-services.json",
       permissions: [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
