@@ -52,9 +52,7 @@ export default function Perfil() {
   const API_URL =
     "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos";
 
-  // ==========================================
-  // 1. ALTERAR SENHA (DIRETO NA TELA)
-  // ==========================================
+  // ALTERAR SENHA
   const iniciarTrocaSenha = () => {
     setSenhaAtualTroca("");
     setNovaSenhaTroca("");
@@ -99,9 +97,7 @@ export default function Perfil() {
     }
   };
 
-  // ==========================================
-  // 2. VERIFICAR SENHA ATUAL
-  // ==========================================
+  // VERIFICAR SENHA ATUAL
   const iniciarTrocaNumero = () => {
     setActionType("phone");
     setSenhaAtual("");
@@ -140,9 +136,7 @@ export default function Perfil() {
     }
   };
 
-  // ==========================================
-  // 3. NOVO NÚMERO
-  // ==========================================
+  // NOVO NÚMERO
   const solicitarCodigoNovoNumero = async () => {
     const numeroLimpo = novoNumero.replace(/\D/g, "");
     if (numeroLimpo.length < 11)
@@ -162,9 +156,7 @@ export default function Perfil() {
     }
   };
 
-  // ==========================================
-  // 4. VALIDAR O CÓDIGO
-  // ==========================================
+  // VALIDAR O CÓDIGO
   const handleCodeConfirm = async (code: string) => {
     setIsCodeModalVisible(false);
 
@@ -215,13 +207,19 @@ export default function Perfil() {
       >
         <Text style={styles.pageTitle}>Meu Perfil</Text>
 
-        <View style={styles.headerProfile}>
+       <View style={styles.headerProfile}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {user?.nome ? user.nome.charAt(0).toUpperCase() : "U"}
             </Text>
           </View>
-          <Text style={styles.userName}>{user?.nome || "Usuário"}</Text>
+          <Text 
+            style={styles.userName} 
+            numberOfLines={2} 
+            adjustsFontSizeToFit 
+          >
+            {user?.nome || "Usuário"}
+          </Text>
           <View style={styles.cityBadge}>
             <Ionicons
               name="location-sharp"
@@ -503,7 +501,6 @@ export default function Perfil() {
         visible={isCodeModalVisible}
         onClose={() => setIsCodeModalVisible(false)}
         onConfirm={handleCodeConfirm}
-        // Se estiver a trocar de número, reenvia chamando o método de novo número. Se for apagar conta, refaz a confirmação (que manda o SMS).
         onResend={
           actionType === "phone"
             ? solicitarCodigoNovoNumero
@@ -623,8 +620,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: scaledFont(22),
     fontWeight: "700",
-    color: "#22",
+    color: "#222",
     textTransform: "capitalize",
+    textAlign: "center",
+    maxWidth: "85%",
   },
   cityBadge: {
     flexDirection: "row",

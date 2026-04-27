@@ -113,10 +113,11 @@ export function CodeVerificationModal({
     }
   }
 
-  function handleSupportWhatsApp() {
-    const supportPhone = "5549999999999"; 
-    const message = "Olá, suporte! Estou a tentar aceder ao aplicativo *Eu Amo, Eu Cuido*, mas não estou a receber o código SMS de verificação. Podem ajudar-me com o meu acesso?";
+ function handleSupportWhatsApp() {
+    const supportPhone = "5549991646337"; 
+    const message = "Olá! Estou tentando criar a minha conta no aplicativo *Eu Amo, Eu Cuido*, mas não estou recebendo o código SMS. Podem ajudar-me a criar o meu acesso?";
 
+    // Link oficial da API do WhatsApp
     const url = `whatsapp://send?phone=${supportPhone}&text=${encodeURIComponent(message)}`;
 
     Linking.openURL(url).catch(() => {

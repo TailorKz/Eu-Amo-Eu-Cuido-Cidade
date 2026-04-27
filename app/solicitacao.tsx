@@ -182,7 +182,7 @@ export default function Solicitacao() {
       formData.append("imagem", { uri: imageUri, name: filename, type: type } as any);
 
       const response = await axios.post(url, formData, { headers: { "Content-Type": "multipart/form-data" } });
-      Alert.alert("Sucesso!", `A sua solicitação foi enviada!\n\nProtocolo: ${response.data.protocolo || "Gerado"}`, [{ text: "OK", onPress: () => router.replace("/home") }]);
+      Alert.alert("Sucesso!", `A sua solicitação foi enviada!\n\nProtocolo: ${response.data.protocolo || "Gerado"}`, [{ text: "OK", onPress: () => router.replace("/reportos") }]);
     } catch (error) {
       // Trata o erro 403 do Java (Geofencing / Fora da Cidade)
       if (axios.isAxiosError(error) && error.response?.status === 403) {

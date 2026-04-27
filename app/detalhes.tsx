@@ -145,7 +145,6 @@ export default function Detalhes() {
       await carregarMensagens();
       setTimeout(() => {
         chatScrollRef.current?.scrollToEnd({ animated: true });
-        scrollRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
       Alert.alert("Erro", "Não foi possível enviar a mensagem.");
@@ -186,18 +185,24 @@ export default function Detalhes() {
     try {
       await axios.put(
         `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`,
-        { localizacao: editLocalizacao, observacao: editObservacao },
+        { localizacao: editLocalizacao, observacao: editObservacao, latitude: null, longitude: null },
       );
       Alert.alert("Sucesso", "Solicitação atualizada!");
       setIsEditing(false);
       chamado.localizacao = editLocalizacao;
       chamado.observacao = editObservacao;
+      chamado.latitude = null; // Atualiza no app na hora
+      chamado.longitude = null;
     } catch (error) {
       Alert.alert("Erro", "Não foi possível atualizar.");
     }
   };
 
   const handleExcluir = () => {
+    if (chamado.status && chamado.status !== "PENDENTE") {
+      return Alert.alert("Não Permitido", "Você só pode excluir chamados que ainda estão Pendentes. Esta solicitação já está " + chamado.status.replace("_", " ") + ".");
+    }
+
     Alert.alert("Atenção", "Tem certeza que deseja excluir esta solicitação?", [
       { text: "Cancelar", style: "cancel" },
       {
@@ -205,9 +210,7 @@ export default function Detalhes() {
         style: "destructive",
         onPress: async () => {
           try {
-            await axios.delete(
-              `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`,
-            );
+            await axios.delete(`https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}`);
             Alert.alert("Excluído", "Solicitação removida.");
             router.replace("/reportos");
           } catch (error) {
@@ -525,12 +528,11 @@ export default function Detalhes() {
                 )}
               </View>
 
-              {/* --- INÍCIO DO SISTEMA DE CHAT --- */}
+              {/* SISTEMA DE CHAT */}
               <View 
                 style={styles.chatContainer}
                 onLayout={(e) => { chatY.current = e.nativeEvent.layout.y; }}
               >
-                {/* Cabeçalho expansível — igual ao original */}
                 <TouchableOpacity
                   style={styles.chatHeader}
                   onPress={() => setIsChatExpanded(!isChatExpanded)}
@@ -547,75 +549,29 @@ export default function Detalhes() {
                   />
                 </TouchableOpacity>
 
-                {isChatExpanded && (
+               {isChatExpanded && (
                   <>
                     <ScrollView
                       ref={chatScrollRef}
-                      style={styles.chatMessagesScroll}
-                      contentContainerStyle={{
-                        paddingBottom: verticalScale(10),
-                      }}
-                      showsVerticalScrollIndicator={false}
-                      keyboardShouldPersistTaps="handled"
-                      // Rola para o fim automaticamente quando novas mensagens chegam
-                      onContentSizeChange={() =>
-                        chatScrollRef.current?.scrollToEnd({ animated: false })
-                      }
+                      style={{ maxHeight: verticalScale(300), width: "100%", marginVertical: verticalScale(10) }}
+                      showsVerticalScrollIndicator={true}
+                      onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
                     >
                       {mensagens.length === 0 ? (
-                        <Text style={styles.chatEmpty}>
-                          Nenhuma mensagem enviada ainda.
-                        </Text>
+                        <Text style={styles.chatEmpty}>Nenhuma mensagem enviada ainda. Tire suas dúvidas por aqui!</Text>
                       ) : (
                         mensagens.map((msg) => {
-                          const isPrefeitura = msg.remetente === "PREFEITURA";
+                          
+                          const isMinhaMensagem = isModoGestao ? msg.remetente === "PREFEITURA" : msg.remetente === "CIDADÃO";
+                          
                           return (
-                            <View
-                              key={msg.id}
-                              style={[
-                                styles.chatBubble,
-                                isPrefeitura
-                                  ? styles.chatBubblePrefeitura
-                                  : styles.chatBubbleCidadao,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.chatRemetente,
-                                  isPrefeitura
-                                    ? { color: "#1F41BB" }
-                                    : { color: "#E0E0E0" },
-                                ]}
-                              >
-                                {isPrefeitura ? "🏢 Equipe Responsável" : "👤 Você"}
+                            <View key={msg.id} style={[styles.chatBubble, isMinhaMensagem ? styles.chatBubbleCidadao : styles.chatBubblePrefeitura]}>
+                              <Text style={[styles.chatRemetente, isMinhaMensagem ? { color: "#E0E0E0" } : { color: "#1F41BB" }]}>
+                                {isMinhaMensagem ? "👤 Você" : (isModoGestao ? "👤 Cidadão" : "🏢 Equipe Responsável")}
                               </Text>
-                              <Text
-                                style={[
-                                  styles.chatTexto,
-                                  isPrefeitura
-                                    ? { color: "#333" }
-                                    : { color: "#FFF" },
-                                ]}
-                              >
-                                {msg.texto}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.chatData,
-                                  isPrefeitura
-                                    ? { color: "#999" }
-                                    : { color: "#D0D0D0" },
-                                ]}
-                              >
-                                {new Date(msg.dataHora).toLocaleString(
-                                  "pt-BR",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                  },
-                                )}
+                              <Text style={[styles.chatTexto, isMinhaMensagem ? { color: "#FFF" } : { color: "#333" }]}>{msg.texto}</Text>
+                              <Text style={[styles.chatData, isMinhaMensagem ? { color: "#D0D0D0" } : { color: "#999" }]}>
+                                {new Date(msg.dataHora).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
                               </Text>
                             </View>
                           );
@@ -1277,6 +1233,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: moderateScale(20),
     borderTopRightRadius: moderateScale(20),
     padding: moderateScale(20),
+    paddingBottom: Platform.OS === "android" ? verticalScale(40) : moderateScale(20),
     maxHeight: "60%",
   },
   modalSectorHeader: {

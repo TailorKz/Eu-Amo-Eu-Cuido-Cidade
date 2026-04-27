@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "Eu Amo Eu Cuido",
     slug: "eu-amo-eu-cuido-cidade",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "myapp",
@@ -13,7 +13,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.tailorkz.euamoeucuido",
-      buildNumber: "1",
+      buildNumber: "3",
       infoPlist: {
         NSCameraUsageDescription:
           "O aplicativo precisa de acesso à sua câmera para que você possa fotografar os problemas de zeladoria na cidade e anexá-los à sua solicitação.",
@@ -27,7 +27,7 @@ export default {
       },
     },
     android: {
-      versionCode: 1,
+      versionCode: 2,
       adaptiveIcon: {
         foregroundImage: "./assets/images/iconandroid.png",
         backgroundColor: "#ffffff",
@@ -64,7 +64,7 @@ export default {
       [
         "expo-notifications",
         {
-          icon: "./assets/images/iconandroid.png",
+          icon: "./assets/images/iconadroidnotification.png",
           color: "#1F41BB",
           defaultChannel: "default",
         },

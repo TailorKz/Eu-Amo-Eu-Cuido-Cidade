@@ -126,7 +126,7 @@ useEffect(() => {
   // CONFIRMA O CÓDIGO E CRIA A CONTA
   async function handleConfirmarCodigo(codeDigitado: string) {
     
-    // Bloqueia imediatamente se não bater com o SMS
+    // Bloqueia se não bater com o SMS
     if (codeDigitado !== codigoGeradoBackend) {
       Alert.alert("Atenção", "O código digitado está incorreto.");
       return; // return impede que a execução continue e crie a conta
@@ -308,14 +308,14 @@ useEffect(() => {
       </TouchableWithoutFeedback>
       {Platform.OS === 'android' && (
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']} // Vai do transparente para uma sombra escura
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
           style={{
             position: 'absolute',
             bottom: 0,
             width: '100%',
-            height: insets.bottom + 25, // Cobre a altura dos botões + um espacinho para o degradê
+            height: insets.bottom + 25, // Cobre a altura dos botões + um espaço para o degradê
             zIndex: 9999, // Fica por cima do wallpaper
-            pointerEvents: 'none', // Não bloqueia nenhum clique na tela
+            pointerEvents: 'none',
           }}
         />
       )}
